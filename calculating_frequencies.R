@@ -51,8 +51,4 @@ ggplot(cluster_frequency, aes(x = as.factor(seurat_clusters), y = relative_frequ
   theme_minimal() +
   scale_fill_brewer(palette = "Set1")
 
-write.csv(cluster_frequency, file="../Seurat object/cluster_frequency.CSV")
-
-ggplot(cluster_frequency, aes(x = data_set, y = count,
-                              fill=seurat_clusters)) + geom_col()
-
+write.csv(cluster_frequency, file="cluster_frequency.CSV")
