@@ -4,6 +4,14 @@ library(harmony)
 
 load("Lucas_noXCR.integrated_SNN_rpca_50.RData")
 
+# adding the CITE Seq as a seperate assay
+SO_cite = Read10X_h5("filtered_feature_bc_matrix.h5")
+SO_cite = CreateSeuratObject(counts = SO_cite[["Antibody Capture"]])
+SO_cite = NormalizeData(SO_cite, normalization.method = "CLR")
+SO.integrated@assays$Cite = SO_cite@assays$RNA
+SO.integrated@assays[["Cite"]]@key
+SO.integrated@assays[["Cite"]]@key <- "cite_"
+
 # getting rid of contaminations and dying cells
 cleaning <- read_csv("w_o_contamination+dying_cells.csv")
 cleaned <- cleaning$Barcode
@@ -30,19 +38,16 @@ SO.har <- ScaleData(SO.har)
 SO.har <- RunPCA(SO.har)
 ElbowPlot(SO.har, ndims = 30, reduction = "pca")
 SO.har <- RunHarmony(SO.har, group.by.vars = "experiment", plot_convergence = TRUE)
-SO.har <- RunUMAP(SO.har, reduction = "harmony", dims = 1:30)
-SO.har <- FindNeighbors(SO.har, reduction = "harmony", dims =1:30)
+SO.har <- RunUMAP(SO.har, reduction = "harmony", dims = 1:20)
+SO.har <- FindNeighbors(SO.har, reduction = "harmony", dims =1:20)
 SO.har <- FindClusters(SO.har, resolution =  0.4)
-DimPlot(SO.har, group.by = c("experiment","seurat_clusters"))
-FeaturePlot(SO.har, features = c("Cd4","Cd8a","Isg15","Zfp683","Cd69"),
-            cols = c("blue","red"), split.by = "experiment")
+rm("SO.integrated")
+DimPlot(SO.har, group.by = c("experiment","seurat_clusters"),
+        label.size = 10, pt.size = 2,label = T)
 
-SO_cite = Read10X_h5("filtered_feature_bc_matrix.h5")
-SO_cite = CreateSeuratObject(counts = SO_cite[["Antibody Capture"]])
-SO_cite = NormalizeData(SO_cite, normalization.method = "CLR")
-SO.har@assays$Cite = SO_cite@assays$RNA
-SO.har@assays[["Cite"]]@key
-SO.har@assays[["Cite"]]@key <- "cite_"
+
+FeaturePlot(SO.har, features = c("Cd4","Cd8a","Isg20","Ms.CD69","Foxp3"),
+            label.size = 10, pt.size = 2,label = F, split.by = "experiment")
 
 ## filterring for cells, which do not have any of these barcodes
 unchanged <- read_csv("subset_filter.csv")
@@ -53,13 +58,14 @@ subsetted <- ScaleData(subsetted)
 subsetted <- NormalizeData(subsetted)
 subsetted <- FindVariableFeatures(subsetted)
 subsetted <- RunHarmony(subsetted, "experiment", plot_convergence = TRUE)
-subsetted <- FindNeighbors(subsetted, reduction="harmony", dims = 1:30)
+subsetted <- FindNeighbors(subsetted, reduction="harmony", dims = 1:20)
 subsetted <- FindClusters(subsetted, resolution = 0.4)
-subsetted <- RunUMAP(subsetted, reduction="harmony", dims = 1:30)
+subsetted <- RunUMAP(subsetted, reduction="harmony", dims = 1:20)
 
 
 DimPlot(subsetted, reduction = "umap",
-        group.by = "seurat_clusters", split.by = "experiment", ncol = 2)
+        group.by = "seurat_clusters", split.by = "experiment", ncol = 2,
+        label.size = 10, pt.size = 2,label = T)
 
 subsetted@meta.data <- subsetted@meta.data %>%
   mutate(Condition = case_when(
@@ -109,8 +115,16 @@ cluster5 <- FindMarkers(subsetted, ident.1 = 'vehicle_5', ident.2 = 'treated_5')
 write.csv2(cluster5, file ="cluster5.csv")
 
 
-subsetted <- RenameIdents(subsetted, '0'='Gzmm CD8+', '1'='Dapl1 CD8+', '2'='Izumo1r CD4',
+subsetted <- RenameIdents(subsetted, '0'='Dapl1 CD8+', '1'='Gzmm CD8+', '2'='Izumo1r CD4',
                           '3'='Th17-like', '4'='Gzmk Effector', '5'='Treg-like')
 
-DimPlot(subsetted, reduction = "umap", split.by = "Condition", ncol = 2, pt.size = 0.8)
-FeaturePlot(subsetted, features = c("Cd4","Cd8a","Foxp3","Rorc","Cd69"), split.by = "Condition",pt.size = .8)
+DimPlot(subsetted, reduction = "umap", split.by = "Condition",
+        ncol = 2, label.size = 10, pt.size = 2,label = T)
+
+FeaturePlot(subsetted, features = c("Cd4","Cd8a","Foxp3","Rorc","Ms.CD69"),
+            label.size = 10, pt.size = 2,label = F,
+            split.by = "Condition")
+
+FeaturePlot(subsetted, features = c("Gzmm","Gzmk","Izumo1r","Dapl1","Tmem176a"),
+            label.size = 10, pt.size = 2,label = F,
+            split.by = "Condition")
