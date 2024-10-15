@@ -128,3 +128,5 @@ FeaturePlot(subsetted, features = c("Cd4","Cd8a","Foxp3","Rorc","Ms.CD69"),
 FeaturePlot(subsetted, features = c("Gzmm","Gzmk","Izumo1r","Dapl1","Tmem176a"),
             label.size = 10, pt.size = 2,label = F,
             split.by = "Condition")
+
+SaveSeuratRds(subsetted, file = "./subsetted.RDS")
