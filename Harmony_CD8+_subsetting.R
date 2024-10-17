@@ -210,14 +210,13 @@ write.csv2(cluster9, file ="cluster9.csv")
 
 
 Idents(SO.har) <- SO.har@meta.data$RNA_snn_res.0.6
-SO.har <- RenameIdents(SO.har, '0'='CD8+ Tcm', '1'='CD4+CD154+', '2'='Treg',
-                       '3'='CD8+ Tcm', '4'='CD8+ Trm', '5'='Th17-like',
-                       '6'='Nkg7+ CD8+','7'='CXCR6+ CD4+','8'='Apoptotic cells+',
-                       '9'='Tcf7+ CD4+','10'='Tfr','11'='IFN I stiumlated',
-                       '12'='Mki67+')
+SO.har <- RenameIdents(SO.har, '0'='???', '1'='Tcm', '2'='Trm',
+                       '3'='Gzmk+ Trm', '4'='Tcm', '5'='Apoptotic cells',
+                       '6'='Trm','7'='IFN I stiumlated','8'='Th-like',
+                       '9'='Mki67+')
 
 DimPlot(SO.har, reduction = "umap", split.by = "Condition",
-        ncol = 2, label.size = 10, pt.size = 2,label = F)
+        ncol = 2, label.size = 10, pt.size = .5,label = F)
 
 FeaturePlot(SO.har, features = c("Cd4","Cd8a","Foxp3","Isg15","Ms.CD69"),
             label.size = 10, pt.size = 2,label = F,
