@@ -61,15 +61,23 @@ SO.har <- RunUMAP(SO.har, reduction = "harmony", dims = 1:20)
 SO.har <- FindNeighbors(SO.har, reduction = "harmony", dims =1:20)
 SO.har <- FindClusters(SO.har, resolution =  c(0.4,0.5,0.6))
 rm("SO.integrated")
+
+SO.har@meta.data <- SO.har@meta.data %>%
+  mutate(Condition = case_when(
+    grepl("vehicle", experiment) ~ "vehicle",
+    grepl("treated", experiment) ~ "treated",
+    TRUE ~ "Unknown"  # Default if none of the patterns match
+  ))
+
 DimPlot(SO.har, group.by = "RNA_snn_res.0.6",
-        #split.by = "Replicates",
-        label.size = 10, pt.size = 2,label = T, ncol = 2)
+        split.by = "Condition",
+        label.size = 10, pt.size = .5,label = T, ncol = 2)
 
 features  <-  c("Cd4","Cd8a","Isg20","Ms.CD69","Foxp3","Ms.CD4","Ms.CD8a")
 
 for (marker in features) {
   p <- FeaturePlot(SO.har, features = marker,
-            label.size = 10, pt.size = 2,label = F
+            label.size = 10, pt.size = .5,label = F
             #, split.by = "Replicates",ncol=2
             )
   print(p)
@@ -92,41 +100,34 @@ for (marker in features) {
 #         group.by = "seurat_clusters", split.by = "experiment", ncol = 2,
 #         label.size = 10, pt.size = 2,label = T)
 
-SO.har@meta.data <- SO.har@meta.data %>%
-  mutate(Condition = case_when(
-    grepl("vehicle", experiment) ~ "vehicle",
-    grepl("treated", experiment) ~ "treated",
-    TRUE ~ "Unknown"  # Default if none of the patterns match
-  ))
-
 ## annotating the dataset ##
 
 # Connect to AnnotationHub
-ah <- AnnotationHub()
-
-# Access the Ensembl database for organism
-ahDb <- query(ah,
-              pattern = c("Mus musculus", "EnsDb"),
-              ignore.case = TRUE)
-
-# Acquire the latest annotation files
-id <- ahDb %>%
-  mcols() %>%
-  rownames() %>%
-  tail(n = 1)
-
-# Download the appropriate Ensembldb database
-edb <- ah[[id]]
-
-# Extract gene-level information from database
-annotations <- genes(edb,
-                     return.type = "data.frame")
-
-# Select annotations of interest
-annotations <- annotations %>%
-  dplyr::select(gene_id, gene_name, seq_name, gene_biotype, description)
-
-write.csv2(annotations, file ="annotations.csv")
+# ah <- AnnotationHub()
+#
+# # Access the Ensembl database for organism
+# ahDb <- query(ah,
+#               pattern = c("Mus musculus", "EnsDb"),
+#               ignore.case = TRUE)
+#
+# # Acquire the latest annotation files
+# id <- ahDb %>%
+#   mcols() %>%
+#   rownames() %>%
+#   tail(n = 1)
+#
+# # Download the appropriate Ensembldb database
+# edb <- ah[[id]]
+#
+# # Extract gene-level information from database
+# annotations <- genes(edb,
+#                      return.type = "data.frame")
+#
+# # Select annotations of interest
+# annotations <- annotations %>%
+#   dplyr::select(gene_id, gene_name, seq_name, gene_biotype, description)
+#
+# write.csv2(annotations, file ="annotations.csv")
 
 # setting res of 0.4 to the active Ident
 Idents(SO.har) <- SO.har@meta.data$RNA_snn_res.0.6
@@ -178,17 +179,14 @@ cluster11_con <- FindConservedMarkers(SO.har, ident.1 = 11, only.pos=T,
                                       grouping.var = "Condition",
                                       logfc.threshold = 0.25)
 write.csv2(cluster11_con, file ="cluster11_con.csv")
-cluster12_con <- FindConservedMarkers(SO.har, ident.1 = 12, only.pos=T,
-                                      grouping.var = "Condition",
-                                      logfc.threshold = 0.25)
-write.csv2(cluster12_con, file ="cluster12_con.csv")
 
-cluster0_ann_markers <- cluster0_con %>%
-  rownames_to_column(var="gene") %>%
-  left_join(y = unique(annotations[, c("gene_name", "gene_biotype")]),
-            by = c("gene" = "gene_name"))
 
-View(cluster0_ann_markers)
+# cluster0_ann_markers <- cluster0_con %>%
+#   rownames_to_column(var="gene") %>%
+#   left_join(y = unique(annotations[, c("gene_name", "gene_biotype")]),
+#             by = c("gene" = "gene_name"))
+#
+# View(cluster0_ann_markers)
 
 
 # Adding a new metadata column with condition+cluster
@@ -220,8 +218,7 @@ cluster10 <- FindMarkers(SO.har, ident.1 = 'vehicle_10', ident.2 = 'treated_10')
 write.csv2(cluster10, file ="cluster10.csv")
 cluster11 <- FindMarkers(SO.har, ident.1 = 'vehicle_11', ident.2 = 'treated_11')
 write.csv2(cluster10, file ="cluster11.csv")
-cluster12 <- FindMarkers(SO.har, ident.1 = 'vehicle_12', ident.2 = 'treated_12')
-write.csv2(cluster10, file ="cluster12.csv")
+
 
 Idents(SO.har) <- SO.har@meta.data$RNA_snn_res.0.6
 SO.har <- RenameIdents(SO.har, '0'='CD8+ Tcm', '1'='CD4+CD154+', '2'='Treg',
@@ -241,7 +238,7 @@ FeaturePlot(SO.har, features = c("Gzmm","Gzmk","Izumo1r","Sostdc1","Tmem176a"),
             label.size = 10, pt.size = 2,label = F,
             split.by = "Condition")
 
-SaveSeuratRds(SO.har, file = "./SO.har.RDS")
+SaveSeuratRds(SO.har, file = "./SO.CD4+.RDS")
 
 FeaturePlot(SO.har,
             features = c("mmHashtag5","mmHashtag6","mmHashtag7","mmHashtag8"),
