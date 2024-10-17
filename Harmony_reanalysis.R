@@ -8,6 +8,7 @@ load("Lucas_noXCR.integrated_SNN_rpca_50.RData")
 # adding the individual replicates to meta data
 replicates <- read.csv("Lukas_Analysis.csv")
 rownames(replicates) <- replicates$Barcode
+repl_subset <- replicates$Barcode
 replicates$Barcode <- NULL
 
 SO.integrated <- AddMetaData(SO.integrated, replicates)
@@ -21,7 +22,7 @@ SO.integrated@assays[["Cite"]]@key
 SO.integrated@assays[["Cite"]]@key <- "cite_"
 
 # getting rid of contaminations and dying cells
-cleaning <- read_csv("w_o_contamination+dying_cells.csv")
+cleaning <- read_csv("w_o_contamination.csv")
 cleaned <- cleaning$Barcode
 SO.integrated <- subset(SO.integrated, cells = cleaned)
 
@@ -30,7 +31,11 @@ idx <- which((SO.integrated@meta.data$experiment != 'Tcell_vehicle') &
                (SO.integrated@meta.data$experiment != 'Tcells_treated'))
 SO.integrated <- SO.integrated[,idx]
 
+# subsetting the SO to the barcodes where I have metadata for Replicates
 
+replicates <- read.csv("Lukas_Analysis.csv")
+repl_subset <- replicates$Barcode
+SO.integrated <- subset(SO.integrated, cells = repl_subset)
 
 DefaultAssay(SO.integrated) <- "RNA"
 
@@ -43,16 +48,19 @@ ElbowPlot(SO.har, ndims = 30, reduction = "pca")
 SO.har <- RunHarmony(SO.har, group.by.vars = "Replicates", plot_convergence = TRUE)
 SO.har <- RunUMAP(SO.har, reduction = "harmony", dims = 1:20)
 SO.har <- FindNeighbors(SO.har, reduction = "harmony", dims =1:20)
-SO.har <- FindClusters(SO.har, resolution =  0.4)
+SO.har <- FindClusters(SO.har, resolution =  c(0.4,0.5,0.6))
 rm("SO.integrated")
-DimPlot(SO.har, group.by = "seurat_clusters", split.by = "Replicates",,
-        label.size = 10, pt.size = 2,label = F, ncol = 2)
+DimPlot(SO.har, group.by = "RNA_snn_res.0.6",
+        #split.by = "Replicates",
+        label.size = 10, pt.size = 2,label = T, ncol = 2)
 
-features  <-  c("Cd4","Cd8a","Isg20","Ms.CD69","Foxp3")
+features  <-  c("Cd4","Cd8a","Isg20","Ms.CD69","Foxp3","Ms.CD4","Ms.CD8a")
 
 for (marker in features) {
   p <- FeaturePlot(SO.har, features = marker,
-            label.size = 10, pt.size = 2,label = F, split.by = "Replicates",ncol=2)
+            label.size = 10, pt.size = 2,label = F
+            #, split.by = "Replicates",ncol=2
+            )
   print(p)
 }
 ## filterring for cells, which do not have any of these barcodes
@@ -80,41 +88,96 @@ SO.har@meta.data <- SO.har@meta.data %>%
     TRUE ~ "Unknown"  # Default if none of the patterns match
   ))
 
+## annotating the dataset ##
+
+# Connect to AnnotationHub
+ah <- AnnotationHub()
+
+# Access the Ensembl database for organism
+ahDb <- query(ah,
+              pattern = c("Mus musculus", "EnsDb"),
+              ignore.case = TRUE)
+
+# Acquire the latest annotation files
+id <- ahDb %>%
+  mcols() %>%
+  rownames() %>%
+  tail(n = 1)
+
+# Download the appropriate Ensembldb database
+edb <- ah[[id]]
+
+# Extract gene-level information from database
+annotations <- genes(edb,
+                     return.type = "data.frame")
+
+# Select annotations of interest
+annotations <- annotations %>%
+  dplyr::select(gene_id, gene_name, seq_name, gene_biotype, description)
+
+write.csv2(annotations, file ="annotations.csv")
+
 # setting res of 0.4 to the active Ident
-Idents(SO.har) <- SO.har@meta.data$RNA_snn_res.0.4
+Idents(SO.har) <- SO.har@meta.data$RNA_snn_res.0.6
 cluster0_con <- FindConservedMarkers(SO.har, ident.1 = 0, only.pos=T,
-                                     grouping.var = "Condition")
+                                     grouping.var = "Condition",
+                                     logfc.threshold = 0.25)
 write.csv2(cluster0_con, file ="cluster0_con.csv")
 cluster1_con <- FindConservedMarkers(SO.har, ident.1 = 1, only.pos=T,
-                                     grouping.var = "Condition")
+                                     grouping.var = "Condition",
+                                     logfc.threshold = 0.25)
 write.csv2(cluster1_con, file ="cluster1_con.csv")
 cluster2_con <- FindConservedMarkers(SO.har, ident.1 = 2, only.pos=T,
-                                     grouping.var = "Condition")
+                                     grouping.var = "Condition",
+                                     logfc.threshold = 0.25)
 write.csv2(cluster2_con, file ="cluster2_con.csv")
 cluster3_con <- FindConservedMarkers(SO.har, ident.1 = 3, only.pos=T,
-                                     grouping.var = "Condition")
+                                     grouping.var = "Condition",
+                                     logfc.threshold = 0.25)
 write.csv2(cluster3_con, file ="cluster3_con.csv")
 cluster4_con <- FindConservedMarkers(SO.har, ident.1 = 4, only.pos=T,
-                                     grouping.var = "Condition")
+                                     grouping.var = "Condition",
+                                     logfc.threshold = 0.25)
 write.csv2(cluster4_con, file ="cluster4_con.csv")
 cluster5_con <- FindConservedMarkers(SO.har, ident.1 = 5, only.pos=T,
-                                     grouping.var = "Condition")
+                                     grouping.var = "Condition",
+                                     logfc.threshold = 0.25)
 write.csv2(cluster5_con, file ="cluster5_con.csv")
 cluster6_con <- FindConservedMarkers(SO.har, ident.1 = 6, only.pos=T,
-                                     grouping.var = "Condition")
+                                     grouping.var = "Condition",
+                                     logfc.threshold = 0.25)
 write.csv2(cluster6_con, file ="cluster6_con.csv")
 cluster7_con <- FindConservedMarkers(SO.har, ident.1 = 7, only.pos=T,
-                                     grouping.var = "Condition")
+                                     grouping.var = "Condition",
+                                     logfc.threshold = 0.25)
 write.csv2(cluster7_con, file ="cluster7_con.csv")
 cluster8_con <- FindConservedMarkers(SO.har, ident.1 = 8, only.pos=T,
-                                     grouping.var = "Condition")
+                                     grouping.var = "Condition",
+                                     logfc.threshold = 0.25)
 write.csv2(cluster8_con, file ="cluster8_con.csv")
 cluster9_con <- FindConservedMarkers(SO.har, ident.1 = 9, only.pos=T,
-                                     grouping.var = "Condition")
+                                     grouping.var = "Condition",
+                                     logfc.threshold = 0.25)
 write.csv2(cluster9_con, file ="cluster9_con.csv")
 cluster10_con <- FindConservedMarkers(SO.har, ident.1 = 10, only.pos=T,
-                                     grouping.var = "Condition")
+                                     grouping.var = "Condition",
+                                     logfc.threshold = 0.25)
 write.csv2(cluster10_con, file ="cluster10_con.csv")
+cluster11_con <- FindConservedMarkers(SO.har, ident.1 = 11, only.pos=T,
+                                      grouping.var = "Condition",
+                                      logfc.threshold = 0.25)
+write.csv2(cluster11_con, file ="cluster11_con.csv")
+cluster12_con <- FindConservedMarkers(SO.har, ident.1 = 12, only.pos=T,
+                                      grouping.var = "Condition",
+                                      logfc.threshold = 0.25)
+write.csv2(cluster12_con, file ="cluster12_con.csv")
+
+cluster0_ann_markers <- cluster0_con %>%
+  rownames_to_column(var="gene") %>%
+  left_join(y = unique(annotations[, c("gene_name", "gene_biotype")]),
+            by = c("gene" = "gene_name"))
+
+View(cluster0_ann_markers)
 
 
 # Adding a new metadata column with condition+cluster
@@ -144,17 +207,22 @@ cluster9 <- FindMarkers(SO.har, ident.1 = 'vehicle_9', ident.2 = 'treated_9')
 write.csv2(cluster9, file ="cluster9.csv")
 cluster10 <- FindMarkers(SO.har, ident.1 = 'vehicle_10', ident.2 = 'treated_10')
 write.csv2(cluster10, file ="cluster10.csv")
+cluster11 <- FindMarkers(SO.har, ident.1 = 'vehicle_11', ident.2 = 'treated_11')
+write.csv2(cluster10, file ="cluster11.csv")
+cluster12 <- FindMarkers(SO.har, ident.1 = 'vehicle_12', ident.2 = 'treated_12')
+write.csv2(cluster10, file ="cluster12.csv")
 
-
+Idents(SO.har) <- SO.har@meta.data$RNA_snn_res.0.6
 SO.har <- RenameIdents(SO.har, '0'='CD8+ Tcm', '1'='CD4+CD154+', '2'='Treg',
-                       '3'='CD8+ Trm', '4'='Th17-like', '5'='Eomes+ effector',
-                       '6'='CXCR6+ CD4+','7'='Tcm','8'='Isg15+','9'='CD8+ Tcm',
-                       '10'='CD137+')
+                       '3'='CD8+ Tcm', '4'='CD8+ Trm', '5'='Th17-like',
+                       '6'='Nkg7+ CD8+','7'='CXCR6+ CD4+','8'='Apoptotic cells+',
+                       '9'='Tcf7+ CD4+','10'='Tfr','11'='IFN I stiumlated',
+                       '12'='Mki67+')
 
-DimPlot(SO.har, reduction = "umap", split.by = "Replicates",
-        ncol = 2, label.size = 10, pt.size = 2,label = T)
+DimPlot(SO.har, reduction = "umap", split.by = "Condition",
+        ncol = 2, label.size = 10, pt.size = 2,label = F)
 
-FeaturePlot(SO.har, features = c("Cd4","Cd8a","Foxp3","Fcer1g","Ms.CD69"),
+FeaturePlot(SO.har, features = c("Cd4","Cd8a","Foxp3","Isg15","Ms.CD69"),
             label.size = 10, pt.size = 2,label = F,
             split.by = "Condition")
 
@@ -169,8 +237,3 @@ FeaturePlot(SO.har,
             label.size = 10, pt.size = 2,label = F,
             split.by = "experiment")
 
-replicates <- read.csv("Lukas_Analysis.csv")
-rownames(replicates) <- replicates$Barcode
-replicates$Barcode <- NULL
-
-SO.har <- AddMetaData(SO.har, replicates)
