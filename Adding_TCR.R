@@ -56,7 +56,7 @@ df_TRB[,1] <- NULL
 df_TRB[,1] <- NULL
 
 aa_cl <- merge(df_TRA, df_TRB, by = "row.names")
-aa_cl$Row.names <- str_replace_all(aa_cl$Row.names, "-\\d","-1")
+
 rownames(aa_cl) <- aa_cl[,1]
 aa_cl[,1] <- NULL
 
@@ -89,7 +89,7 @@ use_these_colors = c(Disc_colors[1:length(levels(Plot_tmp$col2))],"#000000")
 Plot = Plot_tmp[order(Plot_tmp$col),]
 
 p <- ggplot(Plot, aes(umap_1, umap_2, color= col)) +
-  geom_point(size=0.3) +
+  geom_point(size=0.3,alpha=.3) +
   labs(title= paste("UMAP"," highlighting ","cells without TCR",sep = ""),color="") +
   xlab("Umap 1") +
   ylab("Umap 2") +
@@ -104,6 +104,7 @@ p <- ggplot(Plot, aes(umap_1, umap_2, color= col)) +
   guides(color = guide_legend(override.aes = list(size = 5)))
 p
 
+SaveSeuratRds(SO, file = "./SO_TCR_added_not_subsetted.RDS")
 ####Subset no TCRs####
 
 summary(is.na(SO@meta.data$aa_clones))
