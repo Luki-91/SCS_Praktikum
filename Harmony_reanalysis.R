@@ -56,7 +56,7 @@ SO.har <- FindNeighbors(SO.har, reduction = "harmony", dims =1:20)
 SO.har <- FindClusters(SO.har, resolution =  c(0.4,0.5,0.6))
 rm("SO.integrated")
 DimPlot(SO.har, group.by = "RNA_snn_res.0.6",
-        #split.by = "Replicates",
+        split.by = "Condition",
         label.size = 10, pt.size = 2,label = T, ncol = 2)
 
 features  <-  c("Cd4","Cd8a","Isg20","Ms.CD69","Foxp3","Ms.CD4","Ms.CD8a")
@@ -68,14 +68,6 @@ for (marker in features) {
             )
   print(p)
 }
-
-
-SO.har@meta.data <- SO.har@meta.data %>%
-  mutate(Condition = case_when(
-    grepl("vehicle", experiment) ~ "vehicle",
-    grepl("treated", experiment) ~ "treated",
-    TRUE ~ "Unknown"  # Default if none of the patterns match
-  ))
 
 # ## annotating the dataset ##
 #
