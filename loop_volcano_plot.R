@@ -1,9 +1,9 @@
 library(ggplot2)
 library(ggrepel)
 
-setwd("C:/Users/lukas/Documents/CQ_Praktikum/full_DEG+CON")
+setwd("C:/Users/lukas/Documents/CQ_Praktikum/CD8+_Reclustering")
 # List of cluster numbers
-clusters <- seq(1,12)  # Add all your cluster numbers here
+clusters <- seq(0,8)  # Add all your cluster numbers here
 
 for (cluster in clusters) {
 
