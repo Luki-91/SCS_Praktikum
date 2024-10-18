@@ -68,23 +68,7 @@ for (marker in features) {
             )
   print(p)
 }
-## filterring for cells, which do not have any of these barcodes
-# unchanged <- read_csv("subset_filter.csv")
-# filter <- unchanged$Barcode
-#
-# subsetted <- subset(SO.har, cells = filter)
-# subsetted <- ScaleData(subsetted)
-# subsetted <- NormalizeData(subsetted)
-# subsetted <- FindVariableFeatures(subsetted)
-# subsetted <- RunHarmony(subsetted, "experiment", plot_convergence = TRUE)
-# subsetted <- FindNeighbors(subsetted, reduction="harmony", dims = 1:20)
-# subsetted <- FindClusters(subsetted, resolution = 0.4)
-# subsetted <- RunUMAP(subsetted, reduction="harmony", dims = 1:20)
-#
-#
-# DimPlot(subsetted, reduction = "umap",
-#         group.by = "seurat_clusters", split.by = "experiment", ncol = 2,
-#         label.size = 10, pt.size = 2,label = T)
+
 
 SO.har@meta.data <- SO.har@meta.data %>%
   mutate(Condition = case_when(
@@ -93,34 +77,34 @@ SO.har@meta.data <- SO.har@meta.data %>%
     TRUE ~ "Unknown"  # Default if none of the patterns match
   ))
 
-## annotating the dataset ##
-
-# Connect to AnnotationHub
-ah <- AnnotationHub()
-
-# Access the Ensembl database for organism
-ahDb <- query(ah,
-              pattern = c("Mus musculus", "EnsDb"),
-              ignore.case = TRUE)
-
-# Acquire the latest annotation files
-id <- ahDb %>%
-  mcols() %>%
-  rownames() %>%
-  tail(n = 1)
-
-# Download the appropriate Ensembldb database
-edb <- ah[[id]]
-
-# Extract gene-level information from database
-annotations <- genes(edb,
-                     return.type = "data.frame")
-
-# Select annotations of interest
-annotations <- annotations %>%
-  dplyr::select(gene_id, gene_name, seq_name, gene_biotype, description)
-
-write.csv2(annotations, file ="annotations.csv")
+# ## annotating the dataset ##
+#
+# # Connect to AnnotationHub
+# ah <- AnnotationHub()
+#
+# # Access the Ensembl database for organism
+# ahDb <- query(ah,
+#               pattern = c("Mus musculus", "EnsDb"),
+#               ignore.case = TRUE)
+#
+# # Acquire the latest annotation files
+# id <- ahDb %>%
+#   mcols() %>%
+#   rownames() %>%
+#   tail(n = 1)
+#
+# # Download the appropriate Ensembldb database
+# edb <- ah[[id]]
+#
+# # Extract gene-level information from database
+# annotations <- genes(edb,
+#                      return.type = "data.frame")
+#
+# # Select annotations of interest
+# annotations <- annotations %>%
+#   dplyr::select(gene_id, gene_name, seq_name, gene_biotype, description)
+#
+# write.csv2(annotations, file ="annotations.csv")
 
 # setting res of 0.4 to the active Ident
 Idents(SO.har) <- SO.har@meta.data$RNA_snn_res.0.6
