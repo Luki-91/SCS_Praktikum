@@ -5,6 +5,24 @@ library(harmony)
 setwd("C:/Users/lukas/Documents/CQ_Praktikum")
 load("Lucas_noXCR.integrated_SNN_rpca_50.RData")
 
+SO.integrated <- readRDS("SO_TCR.RDS")
+
+Disc_colors = c("#DC050C","#FB8072","#1965B0","#7BAFDE","#882E72","#B17BA6","#FF7F00","#FDB462","#E7298A","#E78AC3",
+
+                "#33A02C","#B2DF8A","#55A1B1","#8DD3C7","#A6761D","#E6AB02","#7570B3","#BEAED4","#666666","#999999",
+
+                "#aa8282","#d4b7b7","#8600bf","#ba5ce3","#808000","#aeae5c","#1e90ff","#00bfff","#56ff0d","#ffff00",
+
+
+
+                "#DC050C","#FB8072","#1965B0","#7BAFDE","#882E72","#B17BA6","#FF7F00","#FDB462","#E7298A","#E78AC3",
+
+                "#33A02C","#B2DF8A","#55A1B1","#8DD3C7","#A6761D","#E6AB02","#7570B3","#BEAED4","#666666","#999999",
+
+                "#aa8282","#d4b7b7","#8600bf","#ba5ce3","#808000","#aeae5c","#1e90ff","#00bfff","#56ff0d","#ffff00"
+
+)
+use_these_colors = c(Disc_colors[1:length(Idents(SO.har))])
 # adding the individual replicates to meta data
 replicates <- read.csv("Lukas_Analysis.csv")
 rownames(replicates) <- replicates$Barcode
@@ -69,9 +87,10 @@ SO.har@meta.data <- SO.har@meta.data %>%
     TRUE ~ "Unknown"  # Default if none of the patterns match
   ))
 
-DimPlot(SO.har, group.by = "RNA_snn_res.0.6",
+DimPlot(SO.har, group.by = "RNA_snn_res.0.5",
         split.by = "Condition",
-        label.size = 10, pt.size = .5,label = T, ncol = 2)
+        label.size = 10, pt.size = .5,label = T, ncol = 2,
+        cols = use_these_colors)
 
 features  <-  c("Cd4","Cd8a","Isg20","Ms.CD69","Foxp3","Ms.CD4","Ms.CD8a")
 
@@ -130,7 +149,7 @@ annotations <- annotations %>%
 write.csv2(annotations, file ="annotations.csv")
 
 # setting res of 0.4 to the active Ident
-Idents(SO.har) <- SO.har@meta.data$RNA_snn_res.0.6
+Idents(SO.har) <- SO.har@meta.data$RNA_snn_res.0.5
 cluster0_con <- FindConservedMarkers(SO.har, ident.1 = 0, only.pos=T,
                                      grouping.var = "Condition",
                                      logfc.threshold = 0.25)
@@ -167,10 +186,7 @@ cluster8_con <- FindConservedMarkers(SO.har, ident.1 = 8, only.pos=T,
                                      grouping.var = "Condition",
                                      logfc.threshold = 0.25)
 write.csv2(cluster8_con, file ="cluster8_con.csv")
-cluster9_con <- FindConservedMarkers(SO.har, ident.1 = 9, only.pos=T,
-                                     grouping.var = "Condition",
-                                     logfc.threshold = 0.25)
-write.csv2(cluster9_con, file ="cluster9_con.csv")
+
 
 
 
@@ -183,9 +199,9 @@ write.csv2(cluster9_con, file ="cluster9_con.csv")
 
 
 # Adding a new metadata column with condition+cluster
-SO.har$comparison <- paste(SO.har$Condition, sep = "_", Idents(SO.har))
+SO.har$comparison_CD8 <- paste(SO.har$Condition, sep = "_", Idents(SO.har))
 # making this the new Ident
-Idents(SO.har) <- "comparison"
+Idents(SO.har) <- "comparison_CD8"
 
 cluster0 <- FindMarkers(SO.har, ident.1 = 'vehicle_0', ident.2 = 'treated_0')
 write.csv2(cluster0, file ="cluster0.csv")
@@ -205,18 +221,16 @@ cluster7 <- FindMarkers(SO.har, ident.1 = 'vehicle_7', ident.2 = 'treated_7')
 write.csv2(cluster7, file ="cluster7.csv")
 cluster8 <- FindMarkers(SO.har, ident.1 = 'vehicle_8', ident.2 = 'treated_8')
 write.csv2(cluster8, file ="cluster8.csv")
-cluster9 <- FindMarkers(SO.har, ident.1 = 'vehicle_9', ident.2 = 'treated_9')
-write.csv2(cluster9, file ="cluster9.csv")
 
 
-Idents(SO.har) <- SO.har@meta.data$RNA_snn_res.0.6
-SO.har <- RenameIdents(SO.har, '0'='???', '1'='Tcm', '2'='Trm',
-                       '3'='Gzmk+ Trm', '4'='Tcm', '5'='Apoptotic cells',
-                       '6'='Trm','7'='IFN I stiumlated','8'='Th-like',
-                       '9'='Mki67+')
+Idents(SO.har) <- SO.har@meta.data$RNA_snn_res.0.5
+SO.har <- RenameIdents(SO.har, '0'='???', '1'='Tcf7+ Tcm', '2'='Trm',
+                       '3'='Gzmk+ Trm', '4'='Dapl1 Tcm', '5'='IFN I stiumlated',
+                       '6'='apoptotic cells','7'='??','8'='Mki67+')
 
 DimPlot(SO.har, reduction = "umap", split.by = "Condition",
-        ncol = 2, label.size = 10, pt.size = .5,label = F)
+        ncol = 2, label.size = 10, pt.size = .5,label = F,
+        cols = use_these_colors)
 
 FeaturePlot(SO.har, features = c("Cd4","Cd8a","Foxp3","Isg15","Ms.CD69"),
             label.size = 10, pt.size = 2,label = F,
