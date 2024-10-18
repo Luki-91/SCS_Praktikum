@@ -6,6 +6,23 @@ setwd("C:/Users/lukas/Documents/CQ_Praktikum")
 #load("Lucas_noXCR.integrated_SNN_rpca_50.RData")
 SO.integrated <- readRDS("SO_TCR.RDS")
 
+Disc_colors = c("#DC050C","#FB8072","#1965B0","#7BAFDE","#882E72","#B17BA6","#FF7F00","#FDB462","#E7298A","#E78AC3",
+
+                "#33A02C","#B2DF8A","#55A1B1","#8DD3C7","#A6761D","#E6AB02","#7570B3","#BEAED4","#666666","#999999",
+
+                "#aa8282","#d4b7b7","#8600bf","#ba5ce3","#808000","#aeae5c","#1e90ff","#00bfff","#56ff0d","#ffff00",
+
+
+
+                "#DC050C","#FB8072","#1965B0","#7BAFDE","#882E72","#B17BA6","#FF7F00","#FDB462","#E7298A","#E78AC3",
+
+                "#33A02C","#B2DF8A","#55A1B1","#8DD3C7","#A6761D","#E6AB02","#7570B3","#BEAED4","#666666","#999999",
+
+                "#aa8282","#d4b7b7","#8600bf","#ba5ce3","#808000","#aeae5c","#1e90ff","#00bfff","#56ff0d","#ffff00"
+
+)
+use_these_colors = c(Disc_colors[1:length(Idents(SO.har))])
+
 ####Removing this because all of this was done before####
 
 # # adding the individual replicates to meta data
@@ -55,16 +72,17 @@ SO.har <- RunUMAP(SO.har, reduction = "harmony", dims = 1:20)
 SO.har <- FindNeighbors(SO.har, reduction = "harmony", dims =1:20)
 SO.har <- FindClusters(SO.har, resolution =  c(0.4,0.5,0.6))
 rm("SO.integrated")
-DimPlot(SO.har, group.by = "RNA_snn_res.0.6",
+DimPlot(SO.har, group.by = "seurat_clusters",
         split.by = "Condition",
-        label.size = 10, pt.size = 2,label = T, ncol = 2)
+        label.size = 10, pt.size = .8,label = T, ncol = 2,
+        cols = use_these_colors)
 
 features  <-  c("Cd4","Cd8a","Isg20","Ms.CD69","Foxp3","Ms.CD4","Ms.CD8a")
 
 for (marker in features) {
   p <- FeaturePlot(SO.har, features = marker,
-            label.size = 10, pt.size = 2,label = F
-            #, split.by = "Replicates",ncol=2
+            label.size = 10, pt.size = .8,label = F
+            #, split.by = "Condition",ncol=2
             )
   print(p)
 }
@@ -189,29 +207,31 @@ write.csv2(cluster9, file ="cluster9.csv")
 cluster10 <- FindMarkers(SO.har, ident.1 = 'vehicle_10', ident.2 = 'treated_10')
 write.csv2(cluster10, file ="cluster10.csv")
 cluster11 <- FindMarkers(SO.har, ident.1 = 'vehicle_11', ident.2 = 'treated_11')
-write.csv2(cluster10, file ="cluster11.csv")
+write.csv2(cluster11, file ="cluster11.csv")
 cluster12 <- FindMarkers(SO.har, ident.1 = 'vehicle_12', ident.2 = 'treated_12')
-write.csv2(cluster10, file ="cluster12.csv")
+write.csv2(cluster12, file ="cluster12.csv")
 
 Idents(SO.har) <- SO.har@meta.data$RNA_snn_res.0.6
-SO.har <- RenameIdents(SO.har, '0'='CD8+ Tcm', '1'='CD4+CD154+', '2'='Treg',
-                       '3'='CD8+ Tcm', '4'='CD8+ Trm', '5'='Th17-like',
-                       '6'='Nkg7+ CD8+','7'='CXCR6+ CD4+','8'='Apoptotic cells+',
-                       '9'='Tcf7+ CD4+','10'='Tfr','11'='IFN I stiumlated',
+SO.har <- RenameIdents(SO.har, '0'='CD8+ Tcm', '1'='CD4+ Tcm',
+                       '2'='CD8+ Dnajc15+ Tcm',
+                       '3'='CD8+ Trm', '4'='Treg', '5'='Nkg7+ CD8+',
+                       '6'='Th17-like','7'='CD4+ Trm','8'='Tfr',
+                       '9'='Tcf7+ CD4+','10'='Apoptotic cells','11'='IFN I stiumlated',
                        '12'='Mki67+')
 
 DimPlot(SO.har, reduction = "umap", split.by = "Condition",
-        ncol = 2, label.size = 10, pt.size = 2,label = F)
+        ncol = 2, label.size = 10, pt.size = .8,label = F,
+        cols = use_these_colors)
 
 FeaturePlot(SO.har, features = c("Cd4","Cd8a","Foxp3","Isg15","Ms.CD69"),
-            label.size = 10, pt.size = 2,label = F,
+            label.size = 10, pt.size = .8,label = F,
             split.by = "Condition")
 
 FeaturePlot(SO.har, features = c("Gzmm","Gzmk","Izumo1r","Sostdc1","Tmem176a"),
-            label.size = 10, pt.size = 2,label = F,
+            label.size = 10, pt.size = .8,label = F,
             split.by = "Condition")
 
-SaveSeuratRds(SO.har, file = "./SO.har.RDS")
+SaveSeuratRds(SO.har, file = "./SO_TCR.RDS")
 
 FeaturePlot(SO.har,
             features = c("mmHashtag5","mmHashtag6","mmHashtag7","mmHashtag8"),
