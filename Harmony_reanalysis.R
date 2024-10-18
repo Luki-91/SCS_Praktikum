@@ -3,39 +3,44 @@ library(tidyverse)
 library(harmony)
 
 setwd("C:/Users/lukas/Documents/CQ_Praktikum")
-load("Lucas_noXCR.integrated_SNN_rpca_50.RData")
+#load("Lucas_noXCR.integrated_SNN_rpca_50.RData")
+SO.integrated <- readRDS("SO_TCR.RDS")
 
-# adding the individual replicates to meta data
-replicates <- read.csv("Lukas_Analysis.csv")
-rownames(replicates) <- replicates$Barcode
-repl_subset <- replicates$Barcode
-replicates$Barcode <- NULL
+####Removing this because all of this was done before####
 
-SO.integrated <- AddMetaData(SO.integrated, replicates)
+# # adding the individual replicates to meta data
+# replicates <- read.csv("Lukas_Analysis.csv")
+# rownames(replicates) <- replicates$Barcode
+# repl_subset <- replicates$Barcode
+# replicates$Barcode <- NULL
+#
+# SO.integrated <- AddMetaData(SO.integrated, replicates)
+#
+# # adding the CITE Seq as a seperate assay
+# SO_cite = Read10X_h5("filtered_feature_bc_matrix.h5")
+# SO_cite = CreateSeuratObject(counts = SO_cite[["Antibody Capture"]])
+# SO_cite = NormalizeData(SO_cite, normalization.method = "CLR")
+# SO.integrated@assays$Cite = SO_cite@assays$RNA
+# SO.integrated@assays[["Cite"]]@key
+# SO.integrated@assays[["Cite"]]@key <- "cite_"
+#
+# # getting rid of contaminations and dying cells
+# cleaning <- read_csv("w_o_contamination.csv")
+# cleaned <- cleaning$Barcode
+# SO.integrated <- subset(SO.integrated, cells = cleaned)
+#
+# # getting rid of the old experiments
+# idx <- which((SO.integrated@meta.data$experiment != 'Tcell_vehicle') &
+#                (SO.integrated@meta.data$experiment != 'Tcells_treated'))
+# SO.integrated <- SO.integrated[,idx]
+#
+# # subsetting the SO to the barcodes where I have metadata for Replicates
+#
+# replicates <- read.csv("Lukas_Analysis.csv")
+# repl_subset <- replicates$Barcode
+# SO.integrated <- subset(SO.integrated, cells = repl_subset)
 
-# adding the CITE Seq as a seperate assay
-SO_cite = Read10X_h5("filtered_feature_bc_matrix.h5")
-SO_cite = CreateSeuratObject(counts = SO_cite[["Antibody Capture"]])
-SO_cite = NormalizeData(SO_cite, normalization.method = "CLR")
-SO.integrated@assays$Cite = SO_cite@assays$RNA
-SO.integrated@assays[["Cite"]]@key
-SO.integrated@assays[["Cite"]]@key <- "cite_"
-
-# getting rid of contaminations and dying cells
-cleaning <- read_csv("w_o_contamination.csv")
-cleaned <- cleaning$Barcode
-SO.integrated <- subset(SO.integrated, cells = cleaned)
-
-# getting rid of the old experiments
-idx <- which((SO.integrated@meta.data$experiment != 'Tcell_vehicle') &
-               (SO.integrated@meta.data$experiment != 'Tcells_treated'))
-SO.integrated <- SO.integrated[,idx]
-
-# subsetting the SO to the barcodes where I have metadata for Replicates
-
-replicates <- read.csv("Lukas_Analysis.csv")
-repl_subset <- replicates$Barcode
-SO.integrated <- subset(SO.integrated, cells = repl_subset)
+####continue here since the cleaning was already performed####
 
 DefaultAssay(SO.integrated) <- "RNA"
 
