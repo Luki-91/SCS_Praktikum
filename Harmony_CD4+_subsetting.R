@@ -246,7 +246,8 @@ SO.har <- RenameIdents(SO.har, '0'='Tcm', '1'='Treg', '2'='Tfr',
                        '11'='Mki67+')
 
 DimPlot(SO.har, reduction = "umap", split.by = "Condition",
-        ncol = 2, label.size = 10, pt.size = .8,label = F)
+        ncol = 2, label.size = 10, pt.size = .8,label = F,
+        cols = use_these_colors)
 
 FeaturePlot(SO.har, features = c("Cd4","Cd8a","Foxp3","Isg15","Ms.CD69"),
             label.size = 10, pt.size = 2,label = F,
