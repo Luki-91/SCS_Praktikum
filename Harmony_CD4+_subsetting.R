@@ -5,6 +5,24 @@ library(harmony)
 setwd("C:/Users/lukas/Documents/CQ_Praktikum")
 load("Lucas_noXCR.integrated_SNN_rpca_50.RData")
 
+SO.integrated <- readRDS("SO_TCR.RDS")
+
+Disc_colors = c("#DC050C","#FB8072","#1965B0","#7BAFDE","#882E72","#B17BA6","#FF7F00","#FDB462","#E7298A","#E78AC3",
+
+                "#33A02C","#B2DF8A","#55A1B1","#8DD3C7","#A6761D","#E6AB02","#7570B3","#BEAED4","#666666","#999999",
+
+                "#aa8282","#d4b7b7","#8600bf","#ba5ce3","#808000","#aeae5c","#1e90ff","#00bfff","#56ff0d","#ffff00",
+
+
+
+                "#DC050C","#FB8072","#1965B0","#7BAFDE","#882E72","#B17BA6","#FF7F00","#FDB462","#E7298A","#E78AC3",
+
+                "#33A02C","#B2DF8A","#55A1B1","#8DD3C7","#A6761D","#E6AB02","#7570B3","#BEAED4","#666666","#999999",
+
+                "#aa8282","#d4b7b7","#8600bf","#ba5ce3","#808000","#aeae5c","#1e90ff","#00bfff","#56ff0d","#ffff00"
+
+)
+use_these_colors = c(Disc_colors[1:length(Idents(SO.har))])
 # adding the individual replicates to meta data
 replicates <- read.csv("Lukas_Analysis.csv")
 rownames(replicates) <- replicates$Barcode
@@ -69,7 +87,7 @@ SO.har@meta.data <- SO.har@meta.data %>%
     TRUE ~ "Unknown"  # Default if none of the patterns match
   ))
 
-DimPlot(SO.har, group.by = "RNA_snn_res.0.6",
+DimPlot(SO.har, group.by = "RNA_snn_res.0.4",
         split.by = "Condition",
         label.size = 10, pt.size = .5,label = T, ncol = 2)
 
@@ -190,9 +208,9 @@ write.csv2(cluster11_con, file ="cluster11_con.csv")
 
 
 # Adding a new metadata column with condition+cluster
-SO.har$comparison <- paste(SO.har$Condition, sep = "_", Idents(SO.har))
+SO.har$comparison_CD4 <- paste(SO.har$Condition, sep = "_", Idents(SO.har))
 # making this the new Ident
-Idents(SO.har) <- "comparison"
+Idents(SO.har) <- "comparison_CD4"
 
 cluster0 <- FindMarkers(SO.har, ident.1 = 'vehicle_0', ident.2 = 'treated_0')
 write.csv2(cluster0, file ="cluster0.csv")
@@ -217,18 +235,18 @@ write.csv2(cluster9, file ="cluster9.csv")
 cluster10 <- FindMarkers(SO.har, ident.1 = 'vehicle_10', ident.2 = 'treated_10')
 write.csv2(cluster10, file ="cluster10.csv")
 cluster11 <- FindMarkers(SO.har, ident.1 = 'vehicle_11', ident.2 = 'treated_11')
-write.csv2(cluster10, file ="cluster11.csv")
+write.csv2(cluster11, file ="cluster11.csv")
 
 
 Idents(SO.har) <- SO.har@meta.data$RNA_snn_res.0.6
-SO.har <- RenameIdents(SO.har, '0'='Tcm', '1'='Treg', '2'='Th17-like',
-                       '3'='CXCR3+ Trm', '4'='Treg', '5'='Tfr',
-                       '6'='Tcm','7'='CXCR6+ Trm','8'='Apoptotic cells+',
-                       '9'='IFN I stiumlated','10'='Eomes+ effector',
-                       '11'='contamination')
+SO.har <- RenameIdents(SO.har, '0'='Tcm', '1'='Treg', '2'='Tfr',
+                       '3'='Th17-like', '4'='IFN I stimulated', '5'='Trm',
+                       '6'='Dapl1 Tcm','7'='Id2+ Trm','8'='Apoptotic cells+',
+                       '9'='Stat1+ Trm','10'='Eomes+ effector',
+                       '11'='Mki67+')
 
 DimPlot(SO.har, reduction = "umap", split.by = "Condition",
-        ncol = 2, label.size = 10, pt.size = .5,label = F)
+        ncol = 2, label.size = 10, pt.size = .8,label = F)
 
 FeaturePlot(SO.har, features = c("Cd4","Cd8a","Foxp3","Isg15","Ms.CD69"),
             label.size = 10, pt.size = 2,label = F,
