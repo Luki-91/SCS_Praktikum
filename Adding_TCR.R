@@ -17,7 +17,10 @@ Disc_colors = c("#DC050C","#FB8072","#1965B0","#7BAFDE","#882E72","#B17BA6","#FF
 
 )
 
-
+setwd("C:/Users/lukas/Documents/CQ_Praktikum")
+load("SO.har")
+SO <- SO.har
+rm("SO.integrated")
 #####Add TCR info ####
 setwd("C:/Users/lukas/Documents/CQ_Praktikum/TCR/outs/vdj_t")
 
@@ -104,6 +107,16 @@ p <- ggplot(Plot, aes(umap_1, umap_2, color= col)) +
   guides(color = guide_legend(override.aes = list(size = 5)))
 p
 
+metadata <- SO@meta.data
+
+summary_table <- metadata %>%
+  group_by(RNA_snn_res.0.6) %>%       # Group by clusters
+  summarize(
+    total_cells = n(),                # Total number of cells in each cluster
+    cells_without_tcr = sum(is.na(aa_clones) | aa_clones == "")  # Cells without TCR info
+  )
+summary_table
+write_csv2(summary_table, file = "summary_table_no_TCR_per_cluster.csv")
 SaveSeuratRds(SO, file = "./SO_TCR_added_not_subsetted.RDS")
 ####Subset no TCRs####
 
