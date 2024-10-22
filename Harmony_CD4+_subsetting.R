@@ -87,9 +87,10 @@ SO.har@meta.data <- SO.har@meta.data %>%
     TRUE ~ "Unknown"  # Default if none of the patterns match
   ))
 
-DimPlot(SO.har, group.by = "RNA_snn_res.0.4",
+DimPlot(SO.har, group.by = "RNA_snn_res.0.6",
         split.by = "Condition",
-        label.size = 10, pt.size = .5,label = T, ncol = 2)
+        label.size = 10, pt.size = .5,label = T, ncol = 2,
+        cols = use_these_colors)
 
 features  <-  c("Cd4","Cd8a","Isg20","Ms.CD69","Foxp3","Ms.CD4","Ms.CD8a")
 
@@ -246,7 +247,7 @@ SO.har <- RenameIdents(SO.har, '0'='Tcm', '1'='Treg', '2'='Tfr',
                        '11'='Mki67+')
 
 DimPlot(SO.har, reduction = "umap", split.by = "Condition",
-        ncol = 2, label.size = 10, pt.size = .8,label = F,
+        ncol = 2, label.size = 10, pt.size = .8,label = T,
         cols = use_these_colors)
 
 FeaturePlot(SO.har, features = c("Cd4","Cd8a","Foxp3","Isg15","Ms.CD69"),
