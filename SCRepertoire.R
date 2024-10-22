@@ -31,9 +31,9 @@ combined.TCR <- combineTCR(contig.list,
                                        "BM_Wort_1", "BM_Wort_2",
                                        "Spleen_veh_1", "Spleen_veh_2",
                                        "Spleen_Wort_1", "Spleen_Wort_2"),
-                           removeNA = FALSE,
+                           removeNA = T,
                            removeMulti = FALSE,
-                           filterMulti = FALSE)
+                           filterMulti = F)
 
 head(combined.TCR[[1]])
 
@@ -41,3 +41,46 @@ clonalQuant(combined.TCR,
             cloneCall="strict",
             chain = "both",
             scale = TRUE)
+
+clonalAbundance(combined.TCR,
+                cloneCall = "gene",
+                scale = FALSE)
+
+clonalLength(combined.TCR,
+             cloneCall="aa",
+             chain = "both")
+
+clonalCompare(combined.TCR,
+              top.clones = 10,
+              samples = c("BM_Veh_1","BM_Veh_2","BM_Wort_1", "BM_Wort_2"),
+              cloneCall="gene",
+              graph = "alluvial")
+
+clonalScatter(combined.TCR,
+              cloneCall ="strict",
+              x.axis = "BM_Veh_1",
+              y.axis = "Spleen_veh_1",
+              dot.size = "total",
+              graph = "proportion")
+
+clonalHomeostasis(combined.TCR,
+                  cloneCall = "gene")
+
+clonalProportion(combined.TCR,
+                 cloneCall = "gene")
+
+percentAA(combined.TCR,
+          chain = "TRA",
+          aa.length = 20)
+
+positionalEntropy(combined.TCR,
+                  chain = "TRA",
+                  aa.length = 20)
+
+clonalDiversity(combined.TCR,
+                cloneCall = "gene")
+
+clonalRarefaction(combined.TCR,
+                  plot.type = 2,
+                  hill.numbers = 1,
+                  n.boots = 2)
