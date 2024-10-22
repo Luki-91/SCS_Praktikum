@@ -45,12 +45,12 @@ use_these_colors = c(Disc_colors[1:length(Idents(SO.har))])
 # cleaning <- read_csv("w_o_contamination.csv")
 # cleaned <- cleaning$Barcode
 # SO.integrated <- subset(SO.integrated, cells = cleaned)
-#
+
 # # getting rid of the old experiments
 # idx <- which((SO.integrated@meta.data$experiment != 'Tcell_vehicle') &
 #                (SO.integrated@meta.data$experiment != 'Tcells_treated'))
 # SO.integrated <- SO.integrated[,idx]
-#
+
 # # subsetting the SO to the barcodes where I have metadata for Replicates
 #
 # replicates <- read.csv("Lukas_Analysis.csv")
@@ -80,7 +80,7 @@ DimPlot(SO.har, group.by = "seurat_clusters",
 features  <-  c("Cd4","Cd8a","Isg20","Ms.CD69","Foxp3","Ms.CD4","Ms.CD8a")
 
 for (marker in features) {
-  p <- FeaturePlot(SO.har, features = marker,
+  p <- FeaturePlot(SO, features = marker,
             label.size = 10, pt.size = .8,label = F
             #, split.by = "Condition",ncol=2
             )
