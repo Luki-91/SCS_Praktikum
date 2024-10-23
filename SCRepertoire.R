@@ -3,7 +3,7 @@ library(tidyverse)
 library(scRepertoire)
 
 setwd("C:/Users/lukas/Documents/CQ_Praktikum")
-SO_TCR <- readRDS("SO_TCR.RDS")
+SO_TCR <- readRDS("SO_TCR_har.RDS")
 setwd("C:/Users/lukas/Documents/CQ_Praktikum/TCR/outs/vdj_t")
 tcr_v <- read.csv("filtered_contig_annotations.csv")
 
@@ -57,7 +57,7 @@ clonalLength(combined.TCR,
 
 clonalCompare(combined.TCR,
               top.clones = 10,
-              samples = c("BM_Veh_1","BM_Veh_2","BM_Wort_1", "BM_Wort_2"),
+              samples = c("BM_Veh_1","BM_Veh_2"),
               cloneCall="gene",
               graph = "alluvial")
 
@@ -107,29 +107,29 @@ combined.TCR$BM_Wort_1$barcode <-
 combined.TCR$BM_Wort_2$barcode <-
   str_remove_all(combined.TCR$BM_Wort_2$barcode, "BM_Wort_2_")
 combined.TCR$Spleen_veh_1$barcode <-
-  str_remove_all(combined.TCR$Spleen_veh_1$barcode, "Spleen_veh_1")
+  str_remove_all(combined.TCR$Spleen_veh_1$barcode, "Spleen_veh_1_")
 combined.TCR$Spleen_veh_2$barcode <-
-  str_remove_all(combined.TCR$Spleen_veh_2$barcode, "Spleen_veh_2")
+  str_remove_all(combined.TCR$Spleen_veh_2$barcode, "Spleen_veh_2_")
 combined.TCR$Spleen_Wort_1$barcode <-
-  str_remove_all(combined.TCR$Spleen_Wort_1$barcode, "Spleen_Wort_1")
+  str_remove_all(combined.TCR$Spleen_Wort_1$barcode, "Spleen_Wort_1_")
 combined.TCR$Spleen_Wort_2$barcode <-
-  str_remove_all(combined.TCR$Spleen_Wort_2$barcode, "Spleen_Wort_2")
+  str_remove_all(combined.TCR$Spleen_Wort_2$barcode, "Spleen_Wort_2_")
 
 
 BM_Veh_1 <- subsetClones(combined.TCR, "sample", "BM_Veh_1")
 BM_Veh_2 <- subsetClones(combined.TCR, "sample", "BM_Veh_2")
 BM_Wort_1 <- subsetClones(combined.TCR, "sample", "BM_Wort_1")
-BM_Wort_2 <- subsetClones(combined.TCR, "sample", "BM_Veh_1")
+BM_Wort_2 <- subsetClones(combined.TCR, "sample", "BM_Wort_2")
 Spleen_veh_1 <- subsetClones(combined.TCR, "sample", "Spleen_veh_1")
 Spleen_veh_2 <- subsetClones(combined.TCR, "sample", "Spleen_veh_2")
 Spleen_Wort_1 <- subsetClones(combined.TCR, "sample", "Spleen_Wort_1")
-Spleen_Wort_2 <- subsetClones(combined.TCR, "sample", "BM_Veh_1")
+Spleen_Wort_2 <- subsetClones(combined.TCR, "sample", "Spleen_Wort_2")
 
 #subset_list <- c(BM_Veh_1,BM_Veh_2,BM_Wort_1,BM_Wort_2,
 #                 Spleen_veh_1,Spleen_veh_2,Spleen_Wort_1,Spleen_Wort_2)
 
 #### Doesn't work in a loop: the first argument has to be replaced everytime
-SO_TCR <- combineExpression(BM_Veh_1,
+SO_TCR <- combineExpression(BM_Wort_2,
                             SO_TCR,
                             cloneCall="gene",
                             proportion = TRUE)
@@ -153,6 +153,6 @@ Disc_colors = c("#DC050C","#FB8072","#1965B0","#7BAFDE","#882E72","#B17BA6","#FF
 use_these_colors = c(Disc_colors[1:length(Idents(SO_TCR))])
 
 DimPlot(SO_TCR, group.by = "cloneSize",
-        split.by = "Condition",
+        split.by = "Replicates",
         label.size = 10, pt.size = .8,label = F, ncol = 2,
         cols = use_these_colors)
