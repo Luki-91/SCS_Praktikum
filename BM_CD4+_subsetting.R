@@ -21,38 +21,7 @@ Disc_colors = c("#DC050C","#FB8072","#1965B0","#7BAFDE","#882E72","#B17BA6","#FF
                 "#aa8282","#d4b7b7","#8600bf","#ba5ce3","#808000","#aeae5c","#1e90ff","#00bfff","#56ff0d","#ffff00"
 
 )
-use_these_colors = c(Disc_colors[1:length(Idents(SO.har))])
-# adding the individual replicates to meta data
-replicates <- read.csv("Lukas_Analysis.csv")
-rownames(replicates) <- replicates$Barcode
-repl_subset <- replicates$Barcode
-replicates$Barcode <- NULL
 
-SO.integrated <- AddMetaData(SO.integrated, replicates)
-
-# adding the CITE Seq as a seperate assay
-SO_cite = Read10X_h5("filtered_feature_bc_matrix.h5")
-SO_cite = CreateSeuratObject(counts = SO_cite[["Antibody Capture"]])
-SO_cite = NormalizeData(SO_cite, normalization.method = "CLR")
-SO.integrated@assays$Cite = SO_cite@assays$RNA
-SO.integrated@assays[["Cite"]]@key
-SO.integrated@assays[["Cite"]]@key <- "cite_"
-
-# getting rid of contaminations and dying cells
-cleaning <- read_csv("w_o_contamination.csv")
-cleaned <- cleaning$Barcode
-SO.integrated <- subset(SO.integrated, cells = cleaned)
-
-# getting rid of the old experiments
-idx <- which((SO.integrated@meta.data$experiment != 'Tcell_vehicle') &
-               (SO.integrated@meta.data$experiment != 'Tcells_treated'))
-SO.integrated <- SO.integrated[,idx]
-
-# subsetting the SO to the barcodes where I have metadata for Replicates
-
-replicates <- read.csv("Lukas_Analysis.csv")
-repl_subset <- replicates$Barcode
-SO.integrated <- subset(SO.integrated, cells = repl_subset)
 
 # subsetting the SO to only CD4+ T cells
 unchanged <- read_csv("CD4_reclustering.csv")
@@ -79,73 +48,24 @@ SO.har <- FindNeighbors(SO.har, reduction = "harmony", dims =1:20)
 SO.har <- FindClusters(SO.har, resolution =  c(0.4,0.5,0.6))
 rm("SO.integrated")
 
-SO.har@meta.data <- SO.har@meta.data %>%
-  mutate(Condition = case_when(
-    grepl("vehicle", experiment) ~ "vehicle",
-    grepl("treated", experiment) ~ "treated",
-    TRUE ~ "Unknown"  # Default if none of the patterns match
-  ))
+use_these_colors = c(Disc_colors[1:length(Idents(SO.har))])
 
 DimPlot(SO.har, group.by = "RNA_snn_res.0.6",
         split.by = "Condition",
         label.size = 10, pt.size = .5,label = T, ncol = 2,
         cols = use_these_colors)
 
-features  <-  c("Cd4","Cd8a","Isg20","Ms.CD69","Foxp3","Ms.CD4","Ms.CD8a")
+features  <-  c("Cd4","Cd8a","S1pr1","Ms.CD69","Cd69")
 
 for (marker in features) {
   p <- FeaturePlot(SO.har, features = marker,
-            label.size = 10, pt.size = .5,label = F
-            #, split.by = "Replicates",ncol=2
-            )
+                   label.size = 10, pt.size = .8,label = F
+                   , split.by = "Replicates",ncol=2
+  )
   print(p)
 }
-## filterring for cells, which do not have any of these barcodes
-# unchanged <- read_csv("subset_filter.csv")
-# filter <- unchanged$Barcode
-#
-# subsetted <- subset(SO.har, cells = filter)
-# subsetted <- ScaleData(subsetted)
-# subsetted <- NormalizeData(subsetted)
-# subsetted <- FindVariableFeatures(subsetted)
-# subsetted <- RunHarmony(subsetted, "experiment", plot_convergence = TRUE)
-# subsetted <- FindNeighbors(subsetted, reduction="harmony", dims = 1:20)
-# subsetted <- FindClusters(subsetted, resolution = 0.4)
-# subsetted <- RunUMAP(subsetted, reduction="harmony", dims = 1:20)
-#
-#
-# DimPlot(subsetted, reduction = "umap",
-#         group.by = "seurat_clusters", split.by = "experiment", ncol = 2,
-#         label.size = 10, pt.size = 2,label = T)
 
-## annotating the dataset ##
-
-# Connect to AnnotationHub
-# ah <- AnnotationHub()
-#
-# # Access the Ensembl database for organism
-# ahDb <- query(ah,
-#               pattern = c("Mus musculus", "EnsDb"),
-#               ignore.case = TRUE)
-#
-# # Acquire the latest annotation files
-# id <- ahDb %>%
-#   mcols() %>%
-#   rownames() %>%
-#   tail(n = 1)
-#
-# # Download the appropriate Ensembldb database
-# edb <- ah[[id]]
-#
-# # Extract gene-level information from database
-# annotations <- genes(edb,
-#                      return.type = "data.frame")
-#
-# # Select annotations of interest
-# annotations <- annotations %>%
-#   dplyr::select(gene_id, gene_name, seq_name, gene_biotype, description)
-#
-# write.csv2(annotations, file ="annotations.csv")
+setwd("C:/Users/lukas/Documents/CQ_Praktikum/BM_reclustered/CD4+")
 
 # setting res of 0.4 to the active Ident
 Idents(SO.har) <- SO.har@meta.data$RNA_snn_res.0.6
@@ -199,14 +119,6 @@ cluster11_con <- FindConservedMarkers(SO.har, ident.1 = 11, only.pos=T,
 write.csv2(cluster11_con, file ="cluster11_con.csv")
 
 
-# cluster0_ann_markers <- cluster0_con %>%
-#   rownames_to_column(var="gene") %>%
-#   left_join(y = unique(annotations[, c("gene_name", "gene_biotype")]),
-#             by = c("gene" = "gene_name"))
-#
-# View(cluster0_ann_markers)
-
-
 # Adding a new metadata column with condition+cluster
 SO.har$comparison_CD4 <- paste(SO.har$Condition, sep = "_", Idents(SO.har))
 # making this the new Ident
@@ -239,14 +151,14 @@ write.csv2(cluster11, file ="cluster11.csv")
 
 
 Idents(SO.har) <- SO.har@meta.data$RNA_snn_res.0.6
-SO.har <- RenameIdents(SO.har, '0'='Tcm', '1'='Treg', '2'='Tfr',
-                       '3'='Th17-like', '4'='IFN I stimulated', '5'='Trm',
-                       '6'='Dapl1 Tcm','7'='Id2+ Trm','8'='Apoptotic cells+',
-                       '9'='Stat1+ Trm','10'='Eomes+ effector',
+SO.har <- RenameIdents(SO.har, '0'='Tcm', '1'='CD69+ Treg', '2'='CXCR6+ Trm',
+                       '3'='CD69- Treg', '4'='Th-17 like', '5'='Apoptotic cells',
+                       '6'='Trm','7'='Contamination','8'='Eomes+ effector',
+                       '9'='Type I IFN','10'='???',
                        '11'='Mki67+')
 
 DimPlot(SO.har, reduction = "umap", split.by = "Condition",
-        ncol = 2, label.size = 10, pt.size = .8,label = T,
+        ncol = 2, label.size = 10, pt.size = .8,label = F,
         cols = use_these_colors)
 
 FeaturePlot(SO.har, features = c("Cd4","Cd8a","Foxp3","Isg15","Ms.CD69"),
@@ -257,7 +169,7 @@ FeaturePlot(SO.har, features = c("Gzmm","Gzmk","Izumo1r","Sostdc1","Tmem176a"),
             label.size = 10, pt.size = 2,label = F,
             split.by = "Condition")
 
-SaveSeuratRds(SO.har, file = "./SO.CD4+.RDS")
+SaveSeuratRds(SO.har, file = "./SO.BM.CD4+.RDS")
 
 FeaturePlot(SO.har,
             features = c("mmHashtag5","mmHashtag6","mmHashtag7","mmHashtag8"),
