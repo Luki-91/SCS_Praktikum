@@ -61,6 +61,8 @@ SO.har@meta.data <- SO.har@meta.data %>%
     TRUE ~ "Unknown"  # Default if none of the patterns match
   ))
 
+setwd("C:/Users/lukas/Documents/CQ_Praktikum/BM_reclustered")
+
 # setting res of 0.4 to the active Ident
 Idents(SO.har) <- SO.har@meta.data$RNA_snn_res.0.6
 cluster0_con <- FindConservedMarkers(SO.har, ident.1 = 0, only.pos=T,
