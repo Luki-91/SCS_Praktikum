@@ -152,11 +152,11 @@ cluster12 <- FindMarkers(SO.har, ident.1 = 'vehicle_12', ident.2 = 'treated_12')
 write.csv2(cluster12, file ="cluster12.csv")
 
 Idents(SO.har) <- SO.har@meta.data$RNA_snn_res.0.6
-SO.har <- RenameIdents(SO.har, '0'='CD8+Dapl1+ Tcm', '1'='CD8+ Trm',
-                       '2'='CD8+ Ly6c2+ Tcm','3'='Treg','4'='CD4+ Tcm',
-                       '5'='Nkg7+Id2+ effector','6'='Th17-like','7'='CD4+ Apopt',
-                       '8'='Hobit+ Trm','9'='CD8+ Apopt','10'='Zfp36l1+ effector',
-                       '11'='IFN I stiumlated','12'='Mki67+')
+SO.har <- RenameIdents(SO.har, '0'='CD8+ Tcm/rm', '1'='CD4+ Tcm',
+                       '2'='CD8+Dapl1+ Tcm','3'='Treg','4'='CD4/8+ Tcm',
+                       '5'='Nkg7+Id2+ effector','6'='Th17-like','7'='Tfr',
+                       '8'='Apoptotic cells','9'='CXCR6+ effector',
+                       '10'='IFN I stiumlated','11'='IFN I','12'='Mki67+')
 
 DimPlot(SO.har, reduction = "umap", split.by = "Condition",
         ncol = 2, label.size = 10, pt.size = .8,label = F,
@@ -170,7 +170,7 @@ FeaturePlot(SO.har, features = c("Gzmm","Gzmk","Izumo1r","Sostdc1","Tmem176a"),
             label.size = 10, pt.size = .8,label = F,
             split.by = "Condition")
 
-SaveSeuratRds(SO.har, file = "./SO_BM.RDS")
+SaveSeuratRds(SO.har, file = "./SO_Spleen.RDS")
 
 FeaturePlot(SO.har,
             features = c("mmHashtag5","mmHashtag6","mmHashtag7","mmHashtag8"),
