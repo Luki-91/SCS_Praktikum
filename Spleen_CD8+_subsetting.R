@@ -156,7 +156,7 @@ FeaturePlot(SO.har, features = c("Gzmm","Gzmk","Izumo1r","Sostdc1","Tmem176a"),
             label.size = 10, pt.size = 2,label = F,
             split.by = "Condition")
 
-SaveSeuratRds(SO.har, file = "./SO.BM.CD8+.RDS")
+SaveSeuratRds(SO.har, file = "./SO.Spleen.CD8+.RDS")
 
 FeaturePlot(SO.har,
             features = c("mmHashtag5","mmHashtag6","mmHashtag7","mmHashtag8"),
