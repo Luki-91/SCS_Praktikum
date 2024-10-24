@@ -60,7 +60,7 @@ features  <-  c("Cd4","Cd8a","S1pr1","Ms.CD69","Cd69")
 for (marker in features) {
   p <- FeaturePlot(SO.har, features = marker,
                    label.size = 10, pt.size = .8,label = F
-                   , split.by = "Replicates",ncol=2
+                   #, split.by = "Replicates",ncol=2
   )
   print(p)
 }
