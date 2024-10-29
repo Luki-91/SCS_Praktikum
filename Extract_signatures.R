@@ -127,22 +127,26 @@ extract_signatures <- function(seurat_obj, cluster_id, n_top = 100) {
 }
 
 # Fixed plot_signature_heatmap function for S4 objects
-plot_signature_heatmap <- function(seurat_obj, genes, cluster_id) {
+plot_signature_heatmap <- function(seurat_obj, signature_genes, cluster_id) {
   message("Extracting data for heatmap...")
 
   # Get cluster cells
   cluster_cells <- WhichCells(seurat_obj, idents = cluster_id)
 
-  # Get expression data
-  expr_matrix <- as.matrix(GetAssayData(seurat_obj, slot = "data")[genes, cluster_cells])
+  # Subset the Seurat object first
+  seurat_subset <- subset(seurat_obj, cells = cluster_cells)
+
+  # Extract expression data for signature genes using proper subsetting
+  expr_matrix <- GetAssayData(seurat_subset, slot = "data")
+  expr_matrix <- as.matrix(expr_matrix[rownames(expr_matrix) %in% signature_genes, ])
 
   # Get condition information
-  cell_conditions <- seurat_obj@meta.data[cluster_cells, "Condition", drop = TRUE]
+  cell_conditions <- seurat_subset$Condition
 
-  # Scale data
+  # Scale the data
   expr_matrix_scaled <- t(scale(t(expr_matrix)))
 
-  # Create column annotation
+  # Create annotation for columns (cells)
   ha <- HeatmapAnnotation(
     df = data.frame(Condition = cell_conditions),
     col = list(Condition = c(
@@ -152,8 +156,11 @@ plot_signature_heatmap <- function(seurat_obj, genes, cluster_id) {
   )
 
   # Calculate log2FC for row annotation
-  vehicle_means <- rowMeans(expr_matrix[, cell_conditions == "vehicle", drop = FALSE])
-  treated_means <- rowMeans(expr_matrix[, cell_conditions == "treated", drop = FALSE])
+  vehicle_cells <- cell_conditions == "vehicle"
+  treated_cells <- cell_conditions == "treated"
+
+  vehicle_means <- rowMeans(expr_matrix[, vehicle_cells, drop = FALSE])
+  treated_means <- rowMeans(expr_matrix[, treated_cells, drop = FALSE])
   log2fc <- log2((vehicle_means + 0.1) / (treated_means + 0.1))
 
   # Create row annotation
@@ -189,25 +196,27 @@ plot_signature_heatmap <- function(seurat_obj, genes, cluster_id) {
   return(heatmap)
 }
 
-# # Function to analyze pathway enrichment
-# analyze_pathways <- function(signature_genes) {
-#   # This is a placeholder - replace with your preferred enrichment method
-#   # Could use clusterProfiler, enrichR, or other tools
-#   message("Add pathway analysis using your preferred method")
-# }
-
-# Main workflow to extract and analyze signatures
+# Updated analyze_cluster_signatures function
 analyze_cluster_signatures <- function(seurat_obj, cluster_id, n_top = 100) {
   # Extract signatures
+  message("Extracting signatures...")
   signatures <- extract_signatures(seurat_obj, cluster_id, n_top)
 
+  if (is.null(signatures) || nrow(signatures) == 0) {
+    message("No significant signatures found")
+    return(NULL)
+  }
+
   # Create visualizations
-  heatmap <- plot_signature_heatmap(seurat_obj, signatures, cluster_id)
+  message("Creating heatmap...")
+  heatmap <- plot_signature_heatmap(seurat_obj, signatures$gene, cluster_id)
 
   # Calculate expression patterns
   cells_cluster <- WhichCells(seurat_obj, idents = cluster_id)
-  expr_matrix <- GetAssayData(seurat_obj, slot = "data")[signatures$gene, cells_cluster]
-  metadata <- seurat_obj@meta.data[cells_cluster, ]
+  seurat_subset <- subset(seurat_obj, cells = cells_cluster)
+  expr_matrix <- GetAssayData(seurat_subset, slot = "data")
+  expr_matrix <- as.matrix(expr_matrix[rownames(expr_matrix) %in% signatures$gene, ])
+  metadata <- seurat_subset@meta.data
 
   # Create pattern groups
   expression_patterns <- data.frame(
@@ -220,6 +229,11 @@ analyze_cluster_signatures <- function(seurat_obj, cluster_id, n_top = 100) {
       TRUE ~ "Other"
     )
   )
+
+  # Save results
+  write.csv(signatures,
+            file = paste0("cluster_", cluster_id, "_signatures.csv"),
+            row.names = FALSE)
 
   return(list(
     signatures = signatures,
