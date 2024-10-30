@@ -415,4 +415,89 @@ if (!is.null(results)) {
   print("\nTop 20 genes:")
   print(head(results$top_genes, 20))
 }
-```
+
+# Function to extract and save key results
+extract_and_save_results <- function(results, output_prefix = "cluster_analysis") {
+  # 1. Model Performance Summary
+  model_performance <- results$performance
+  model_performance$accuracy <- round(model_performance$AUC * 100, 2)
+  write.csv2(model_performance,
+            file = paste0(output_prefix, "_model_performance.csv"),
+            row.names = FALSE)
+
+  # 2. Top Features Summary
+  # Combine importance scores with expression statistics
+  top_features <- merge(
+    results$importance,
+    results$top_genes,
+    by.x = "feature",
+    by.y = "gene",
+    all.x = TRUE
+  )
+
+  # Reorder columns for clarity
+  top_features <- top_features[, c(
+    "feature",
+    "aggregate_score",
+    "elastic_net",
+    "random_forest",
+    "xgboost",
+    "mean_vehicle",
+    "mean_treated",
+    "log2FC",
+    "pct_expressing_vehicle",
+    "pct_expressing_treated",
+    "diff_pct"
+  )]
+
+  # Round numeric columns for readability
+  numeric_cols <- sapply(top_features, is.numeric)
+  top_features[numeric_cols] <- round(top_features[numeric_cols], 3)
+
+  # Sort by aggregate score
+  top_features <- top_features[order(-top_features$aggregate_score), ]
+
+  # Save full results
+  write.csv2(top_features,
+            file = paste0(output_prefix, "_feature_importance.csv"),
+            row.names = FALSE)
+
+  # 3. Create a simplified top 20 features summary
+  top_20 <- head(top_features, 20)
+  write.csv2(top_20,
+            file = paste0(output_prefix, "_top20_features.csv"),
+            row.names = FALSE)
+
+  # Return list of data frames for immediate use
+  return(list(
+    model_performance = model_performance,
+    top_features = top_features,
+    top_20 = top_20
+  ))
+}
+
+# Extract and save results
+extracted_results <- extract_and_save_results(results, output_prefix = "cluster2")
+
+# View model performance
+print("Model Performance:")
+print(extracted_results$model_performance)
+
+# View top 20 features
+print("\nTop 20 Features:")
+print(extracted_results$top_20)
+
+# The saved files will contain:
+# 1. cluster2_model_performance.csv:
+#    - Model names
+#    - AUC scores
+#    - Accuracy percentages
+
+# 2. cluster2_feature_importance.csv:
+#    - All features with their importance scores
+#    - Expression statistics
+#    - Fold changes
+#    - Expression percentages
+
+# 3. cluster2_top20_features.csv:
+#    - Same columns as above but only for top 20 features
