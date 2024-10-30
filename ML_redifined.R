@@ -16,7 +16,7 @@ prepare_ml_data <- function(seurat_obj, cluster_id) {
   cells_cluster <- WhichCells(seurat_obj, idents = cluster_id)
 
   # Get expression matrix using proper Seurat accessor
-  expr_matrix <- GetAssayData(seurat_obj, slot = "data", assay = "RNA")
+  expr_matrix <- GetAssayData(seurat_obj, layer = "data", assay = "RNA")
   expr_matrix <- expr_matrix[, cells_cluster, drop = FALSE]
 
   # Get metadata for the cluster
@@ -377,7 +377,7 @@ run_ml_pipeline <- function(seurat_obj, cluster_id, top_n = 100) {
     }
 
     # Safely subset expression matrix
-    expr_matrix <- GetAssayData(seurat_obj, slot = "data")
+    expr_matrix <- GetAssayData(seurat_obj, layer = "data")
     valid_genes <- intersect(top_genes, rownames(expr_matrix))
     if (length(valid_genes) == 0) {
       message("No valid genes found in expression matrix")
@@ -412,7 +412,7 @@ run_ml_pipeline <- function(seurat_obj, cluster_id, top_n = 100) {
       )
 
     # Save results
-    write.csv(expr_stats,
+    write.csv2(expr_stats,
               file = paste0("cluster_", cluster_id, "_ml_signatures.csv"),
               row.names = FALSE)
 
@@ -436,7 +436,8 @@ run_ml_pipeline <- function(seurat_obj, cluster_id, top_n = 100) {
 }
 
 # Example usage
-cluster_id <- "1"
+cluster_id <- "6"
+Idents(SO.har) <- SO.har@meta.data$RNA_snn_res.0.4
 results <- run_ml_pipeline(SO.har, cluster_id)
 
 # View results
@@ -509,7 +510,7 @@ extract_and_save_results <- function(results, output_prefix = "cluster_analysis"
 }
 
 # Extract and save results
-extracted_results <- extract_and_save_results(results, output_prefix = "cluster1")
+extracted_results <- extract_and_save_results(results, output_prefix = "cluster6")
 
 # View model performance
 print("Model Performance:")
