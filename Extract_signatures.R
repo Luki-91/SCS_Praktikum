@@ -243,7 +243,7 @@ analyze_cluster_signatures <- function(seurat_obj, cluster_id, n_top = 100) {
 }
 
 # Example usage
-cluster_id <- "6"  # Replace with your cluster of interest
+cluster_id <- "1"  # Replace with your cluster of interest
 Idents(SO.har) <- SO.har@meta.data$RNA_snn_res.0.4
 results <- analyze_cluster_signatures(SO.har, cluster_id)
 
@@ -257,4 +257,5 @@ print(results$heatmap)
 print(table(results$patterns$pattern))
 
 # Export results to file
-write.csv(results$signatures, file = paste0("cluster_", cluster_id, "_signatures.csv"))
+write.csv2(results$signatures, file = paste0("CD8_cluster_", cluster_id, "_signatures.csv"))
+write.csv2(results$patterns, file = paste0("CD8_cluster_", cluster_id, "_patterns.csv"))
