@@ -23,7 +23,7 @@ prepare_ml_data <- function(seurat_obj, cluster_id) {
   metadata <- seurat_obj@meta.data[cells_cluster, , drop = FALSE]
 
   # Create response variable (0 for treated, 1 for vehicle)
-  y <- as.factor(ifelse(metadata$Condition == "vehicle", 1, 0))
+  y <- as.factor(ifelse(metadata$Condition == "treated", 1, 0))
 
   # Check if we have enough samples
   if (length(unique(y)) != 2) {
@@ -436,8 +436,8 @@ run_ml_pipeline <- function(seurat_obj, cluster_id, top_n = 100) {
 }
 
 # Example usage
-cluster_id <- "6"
 Idents(SO.har) <- SO.har@meta.data$RNA_snn_res.0.4
+cluster_id <- "5"
 results <- run_ml_pipeline(SO.har, cluster_id)
 
 # View results
@@ -449,7 +449,7 @@ if (!is.null(results)) {
   print(head(results$top_genes, 20))
 }
 
-# Function to extract and save key results
+# Modified extract_and_save_results function with clearer interpretation
 extract_and_save_results <- function(results, output_prefix = "cluster_analysis") {
   # 1. Model Performance Summary
   model_performance <- results$performance
@@ -459,13 +459,19 @@ extract_and_save_results <- function(results, output_prefix = "cluster_analysis"
             row.names = FALSE)
 
   # 2. Top Features Summary
-  # Combine importance scores with expression statistics
   top_features <- merge(
     results$importance,
     results$top_genes,
     by.x = "feature",
     by.y = "gene",
     all.x = TRUE
+  )
+
+  # Add interpretation column
+  top_features$interpretation <- ifelse(
+    top_features$log2FC > 0,
+    "Up in treated",
+    "Down in treated"
   )
 
   # Reorder columns for clarity
@@ -475,12 +481,13 @@ extract_and_save_results <- function(results, output_prefix = "cluster_analysis"
     "elastic_net",
     "random_forest",
     "xgboost",
-    "mean_vehicle",
     "mean_treated",
+    "mean_vehicle",
     "log2FC",
-    "pct_expressing_vehicle",
     "pct_expressing_treated",
-    "diff_pct"
+    "pct_expressing_vehicle",
+    "diff_pct",
+    "interpretation"
   )]
 
   # Round numeric columns for readability
@@ -495,7 +502,7 @@ extract_and_save_results <- function(results, output_prefix = "cluster_analysis"
             file = paste0(output_prefix, "_feature_importance.csv"),
             row.names = FALSE)
 
-  # 3. Create a simplified top 20 features summary
+  # Create a simplified top 20 features summary
   top_20 <- head(top_features, 20)
   write.csv2(top_20,
             file = paste0(output_prefix, "_top20_features.csv"),
@@ -510,7 +517,7 @@ extract_and_save_results <- function(results, output_prefix = "cluster_analysis"
 }
 
 # Extract and save results
-extracted_results <- extract_and_save_results(results, output_prefix = "cluster6")
+extracted_results <- extract_and_save_results(results, output_prefix = "cluster5")
 
 # View model performance
 print("Model Performance:")
