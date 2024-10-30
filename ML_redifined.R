@@ -67,7 +67,7 @@ prepare_ml_data <- function(seurat_obj, cluster_id) {
 train_ml_models <- function(train_x, train_y, feature_names) {
   models <- list()
 
-  # 1. Elastic Net
+  # 1. Elastic Net (unchanged)
   message("Training Elastic Net...")
   tryCatch({
     cv_fit <- cv.glmnet(as.matrix(train_x), train_y,
@@ -80,10 +80,9 @@ train_ml_models <- function(train_x, train_y, feature_names) {
     models$elastic_net <- NULL
   })
 
-  # 2. Random Forest with reduced features
+  # 2. Random Forest (unchanged)
   message("Training Random Forest...")
   tryCatch({
-    # Select top 1000 features
     var_features <- apply(train_x, 2, var)
     top_features <- names(sort(var_features, decreasing = TRUE))[1:min(1000, ncol(train_x))]
     rf_train_x <- train_x[, top_features, drop = FALSE]
@@ -101,33 +100,44 @@ train_ml_models <- function(train_x, train_y, feature_names) {
     models$random_forest <- NULL
   })
 
-  # 3. XGBoost with fixed feature handling
+  # 3. XGBoost with fixed implementation
   message("Training XGBoost...")
   tryCatch({
-    # Use same features as Random Forest
     if (!is.null(models$random_forest)) {
+      # Use same features as Random Forest
       xgb_train_x <- train_x[, top_features, drop = FALSE]
 
-      # Create DMatrix without explicit feature names
-      dtrain <- xgb.DMatrix(data = as.matrix(xgb_train_x),
-                            label = as.numeric(as.character(train_y)) - 1)
+      # Create proper feature names
+      feature_names <- colnames(xgb_train_x)
 
+      # Convert response to numeric (0/1)
+      y_numeric <- as.numeric(train_y) - 1
+
+      # Create DMatrix with named features
+      dtrain <- xgb.DMatrix(data = as.matrix(xgb_train_x),
+                            label = y_numeric)
+
+      # Set XGBoost parameters
       params <- list(
         objective = "binary:logistic",
         eta = 0.1,
         max_depth = 6,
         subsample = 0.8,
-        colsample_bytree = 0.8
+        colsample_bytree = 0.8,
+        eval_metric = "auc"
       )
 
-      xgb_model <- xgb.train(params = params,
-                             data = dtrain,
-                             nrounds = 100,
-                             verbose = 0)
+      # Train model with feature names
+      xgb_model <- xgb.train(
+        params = params,
+        data = dtrain,
+        nrounds = 100,
+        verbose = 0,
+        feature_names = feature_names
+      )
 
-      # Store model and feature names separately
       models$xgboost <- xgb_model
-      models$xgboost_features <- top_features
+      models$xgboost_features <- feature_names
     }
   }, error = function(e) {
     message("Error in XGBoost: ", e$message)
@@ -138,11 +148,11 @@ train_ml_models <- function(train_x, train_y, feature_names) {
   return(models)
 }
 
-# Modified evaluate_models function with updated XGBoost importance calculation
+# Modified evaluate_models function with fixed XGBoost evaluation
 evaluate_models <- function(models, test_x, test_y, feature_names) {
   results <- list()
 
-  # 1. Elastic Net evaluation
+  # 1. Elastic Net evaluation (unchanged)
   if (!is.null(models$elastic_net)) {
     tryCatch({
       en_pred <- predict(models$elastic_net, newx = as.matrix(test_x),
@@ -160,7 +170,7 @@ evaluate_models <- function(models, test_x, test_y, feature_names) {
     })
   }
 
-  # 2. Random Forest evaluation
+  # 2. Random Forest evaluation (unchanged)
   if (!is.null(models$random_forest)) {
     tryCatch({
       rf_test_x <- test_x[, models$random_forest$features, drop = FALSE]
@@ -180,26 +190,26 @@ evaluate_models <- function(models, test_x, test_y, feature_names) {
   # 3. XGBoost evaluation with fixed importance calculation
   if (!is.null(models$xgboost) && !is.null(models$xgboost_features)) {
     tryCatch({
-      # Prepare test data using the same features as training
+      # Prepare test data
       xgb_test_x <- test_x[, models$xgboost_features, drop = FALSE]
 
       # Make predictions
       xgb_pred <- predict(models$xgboost, as.matrix(xgb_test_x))
       xgb_roc <- roc(test_y, xgb_pred)
 
-      # Calculate feature importance using a different method
+      # Calculate feature importance using xgb.importance
       importance_matrix <- xgb.importance(
-        model = models$xgboost,
-        feature_names = models$xgboost_features
+        feature_names = models$xgboost_features,
+        model = models$xgboost
       )
 
-      # Create importance vector
+      # Convert importance matrix to named vector
       importance_values <- rep(0, length(models$xgboost_features))
       names(importance_values) <- models$xgboost_features
 
-      # Fill in importance values
       if (nrow(importance_matrix) > 0) {
-        importance_values[importance_matrix$Feature] <- importance_matrix$Gain
+        matched_features <- match(importance_matrix$Feature, names(importance_values))
+        importance_values[matched_features] <- importance_matrix$Gain
       }
 
       results$xgboost <- list(
@@ -208,59 +218,21 @@ evaluate_models <- function(models, test_x, test_y, feature_names) {
       )
     }, error = function(e) {
       message("Error in XGBoost evaluation: ", e$message)
+      print(str(models$xgboost_features))
     })
   }
 
   return(results)
 }
 
-# Helper function to safely get importance scores
-get_safe_importance <- function(model_results, feature_set) {
-  # Initialize vector of zeros with names
-  imp <- numeric(length(feature_set))
-  names(imp) <- feature_set
-
-  # If no model results, return zeros
-  if (is.null(model_results) || is.null(model_results$importance)) {
-    return(imp)
-  }
-
-  # Get importance scores
-  model_imp <- model_results$importance
-
-  # Convert to named vector if it isn't already
-  if (is.null(names(model_imp))) {
-    if (length(model_imp) > length(feature_set)) {
-      # Truncate if longer than feature_set
-      model_imp <- model_imp[1:length(feature_set)]
-      names(model_imp) <- feature_set
-    } else if (length(model_imp) < length(feature_set)) {
-      # Pad with zeros if shorter
-      temp_imp <- numeric(length(feature_set))
-      temp_imp[1:length(model_imp)] <- model_imp
-      model_imp <- temp_imp
-      names(model_imp) <- feature_set
-    } else {
-      # Same length, just add names
-      names(model_imp) <- feature_set
-    }
-  }
-
-  # Match features and fill importance scores
-  common_features <- intersect(names(model_imp), feature_set)
-  imp[common_features] <- model_imp[common_features]
-
-  return(imp)
-}
-
-# Modified aggregate_importance function with better feature handling
+# Modified aggregate_importance function to handle missing model results
 aggregate_importance <- function(eval_results, feature_names) {
   if (length(eval_results) == 0) {
     warning("No evaluation results provided")
     return(NULL)
   }
 
-  # Get the set of features actually used in the models
+  # Get the set of features that have importance scores
   used_features <- unique(c(
     names(eval_results$elastic_net$importance),
     names(eval_results$random_forest$importance),
@@ -272,7 +244,7 @@ aggregate_importance <- function(eval_results, feature_names) {
     return(NULL)
   }
 
-  # Create importance matrix with only used features
+  # Create importance matrix
   importance_df <- data.frame(
     feature = used_features,
     elastic_net = 0,
@@ -305,14 +277,11 @@ aggregate_importance <- function(eval_results, feature_names) {
   # Calculate aggregate score
   importance_df$aggregate_score <- rowMeans(importance_df[,2:4])
 
-  # Sort by aggregate score and remove zero-importance features
+  # Sort by aggregate score
   importance_df <- importance_df[order(-importance_df$aggregate_score),]
-  importance_df <- importance_df[rowSums(abs(importance_df[,2:4])) > 0,]
 
-  if (nrow(importance_df) == 0) {
-    warning("No features with non-zero importance scores found")
-    return(NULL)
-  }
+  # Remove rows where all importance scores are 0
+  importance_df <- importance_df[rowSums(abs(importance_df[,2:4])) > 0,]
 
   return(importance_df)
 }
