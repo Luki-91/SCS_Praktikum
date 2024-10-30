@@ -1,4 +1,3 @@
-```R
 library(Seurat)
 library(tidyverse)
 library(caret)
@@ -9,17 +8,19 @@ library(e1071)
 library(ROCR)
 library(pROC)
 
-# Function to prepare data for ML
+# Modified prepare_ml_data function with proper Seurat object handling
 prepare_ml_data <- function(seurat_obj, cluster_id) {
   message("Preparing data for cluster ", cluster_id)
 
-  # Extract data for specified cluster
+  # Extract data for specified cluster using proper Seurat functions
   cells_cluster <- WhichCells(seurat_obj, idents = cluster_id)
-  expr_matrix <- GetAssayData(seurat_obj, slot = "data")[, cells_cluster]
-  metadata <- seurat_obj@meta.data[cells_cluster, , drop = FALSE]
 
-  # Convert to dense matrix
-  expr_matrix <- as.matrix(expr_matrix)
+  # Get expression matrix using proper Seurat accessor
+  expr_matrix <- GetAssayData(seurat_obj, slot = "data", assay = "RNA")
+  expr_matrix <- expr_matrix[, cells_cluster, drop = FALSE]
+
+  # Get metadata for the cluster
+  metadata <- seurat_obj@meta.data[cells_cluster, , drop = FALSE]
 
   # Create response variable (0 for treated, 1 for vehicle)
   y <- as.factor(ifelse(metadata$Condition == "vehicle", 1, 0))
@@ -33,44 +34,76 @@ prepare_ml_data <- function(seurat_obj, cluster_id) {
   set.seed(42)
   trainIndex <- createDataPartition(y, p = 0.7, list = FALSE)
 
-  # Transpose matrix and split into train/test
-  expr_matrix_t <- t(expr_matrix)
-  train_x <- expr_matrix_t[trainIndex, ]
-  test_x <- expr_matrix_t[-trainIndex, ]
+  # Convert expression matrix to dense matrix if sparse
+  if (inherits(expr_matrix, "dgCMatrix")) {
+    expr_matrix <- as.matrix(expr_matrix)
+  }
+
+  # Split the data
+  train_cells <- cells_cluster[trainIndex]
+  test_cells <- cells_cluster[-trainIndex]
+
+  # Create training and testing matrices
+  train_x <- t(expr_matrix[, train_cells, drop = FALSE])
+  test_x <- t(expr_matrix[, test_cells, drop = FALSE])
+
+  # Convert to data frames and handle missing values
+  train_x <- as.data.frame(train_x)
+  test_x <- as.data.frame(test_x)
 
   # Handle NA/infinite values
   train_x[is.na(train_x)] <- 0
   test_x[is.na(test_x)] <- 0
-
-  # Replace infinite values
   train_x[!is.finite(as.matrix(train_x))] <- 0
   test_x[!is.finite(as.matrix(test_x))] <- 0
 
-  # Create final data frames
-  train_x <- as.data.frame(train_x)
-  test_x <- as.data.frame(test_x)
+  # Get feature names (genes)
+  feature_names <- rownames(expr_matrix)
+
+  # Ensure column names are set correctly
+  colnames(train_x) <- feature_names
+  colnames(test_x) <- feature_names
+
+  # Create final training and testing sets
   train_y <- y[trainIndex]
   test_y <- y[-trainIndex]
+
+  # Print some diagnostic information
+  message("Data preparation summary:")
+  message("Number of genes: ", length(feature_names))
+  message("Number of training samples: ", nrow(train_x))
+  message("Number of testing samples: ", nrow(test_x))
+  message("Class distribution in training: ")
+  print(table(train_y))
 
   return(list(
     train_x = train_x,
     test_x = test_x,
     train_y = train_y,
     test_y = test_y,
-    feature_names = colnames(expr_matrix),
-    n_features = nrow(expr_matrix),
-    n_samples = ncol(expr_matrix)
+    feature_names = feature_names,
+    n_features = length(feature_names),
+    n_samples = length(cells_cluster)
   ))
 }
 
-# Modified train_ml_models function with fixed XGBoost implementation
+# Modified train_ml_models function with additional checks
 train_ml_models <- function(train_x, train_y, feature_names) {
   models <- list()
 
-  # 1. Elastic Net (unchanged)
+  # Check if train_x is valid
+  if (is.null(train_x) || ncol(train_x) == 0 || nrow(train_x) == 0) {
+    stop("Invalid training data")
+  }
+
+  # 1. Elastic Net
   message("Training Elastic Net...")
   tryCatch({
-    cv_fit <- cv.glmnet(as.matrix(train_x), train_y,
+    # Ensure matrix format
+    x_matrix <- as.matrix(train_x)
+
+    cv_fit <- cv.glmnet(x = x_matrix,
+                        y = train_y,
                         family = "binomial",
                         alpha = 0.5,
                         nfolds = 5)
@@ -80,9 +113,10 @@ train_ml_models <- function(train_x, train_y, feature_names) {
     models$elastic_net <- NULL
   })
 
-  # 2. Random Forest (unchanged)
+  # 2. Random Forest
   message("Training Random Forest...")
   tryCatch({
+    # Select top 1000 features based on variance
     var_features <- apply(train_x, 2, var)
     top_features <- names(sort(var_features, decreasing = TRUE))[1:min(1000, ncol(train_x))]
     rf_train_x <- train_x[, top_features, drop = FALSE]
@@ -100,24 +134,18 @@ train_ml_models <- function(train_x, train_y, feature_names) {
     models$random_forest <- NULL
   })
 
-  # 3. XGBoost with fixed implementation
+  # 3. XGBoost
   message("Training XGBoost...")
   tryCatch({
     if (!is.null(models$random_forest)) {
-      # Use same features as Random Forest
       xgb_train_x <- train_x[, top_features, drop = FALSE]
 
-      # Create proper feature names
-      feature_names <- colnames(xgb_train_x)
+      # Convert to matrix
+      xgb_train_matrix <- as.matrix(xgb_train_x)
 
-      # Convert response to numeric (0/1)
-      y_numeric <- as.numeric(train_y) - 1
+      dtrain <- xgb.DMatrix(data = xgb_train_matrix,
+                            label = as.numeric(train_y) - 1)
 
-      # Create DMatrix with named features
-      dtrain <- xgb.DMatrix(data = as.matrix(xgb_train_x),
-                            label = y_numeric)
-
-      # Set XGBoost parameters
       params <- list(
         objective = "binary:logistic",
         eta = 0.1,
@@ -127,17 +155,13 @@ train_ml_models <- function(train_x, train_y, feature_names) {
         eval_metric = "auc"
       )
 
-      # Train model with feature names
-      xgb_model <- xgb.train(
-        params = params,
-        data = dtrain,
-        nrounds = 100,
-        verbose = 0,
-        feature_names = feature_names
-      )
+      xgb_model <- xgb.train(params = params,
+                             data = dtrain,
+                             nrounds = 100,
+                             verbose = 0)
 
       models$xgboost <- xgb_model
-      models$xgboost_features <- feature_names
+      models$xgboost_features <- top_features
     }
   }, error = function(e) {
     message("Error in XGBoost: ", e$message)
@@ -148,19 +172,26 @@ train_ml_models <- function(train_x, train_y, feature_names) {
   return(models)
 }
 
-# Modified evaluate_models function with fixed XGBoost evaluation
+# Modified evaluate_models function to handle corrected feature names
 evaluate_models <- function(models, test_x, test_y, feature_names) {
   results <- list()
 
-  # 1. Elastic Net evaluation (unchanged)
+  # 1. Elastic Net evaluation
   if (!is.null(models$elastic_net)) {
     tryCatch({
-      en_pred <- predict(models$elastic_net, newx = as.matrix(test_x),
+      # Ensure column names are correct for elastic net
+      x_matrix <- as.matrix(test_x)
+      colnames(x_matrix) <- feature_names
+
+      en_pred <- predict(models$elastic_net, newx = x_matrix,
                          s = "lambda.min", type = "response")
       en_roc <- roc(test_y, as.vector(en_pred))
+
+      # Get coefficients with correct feature names
       coef_matrix <- as.matrix(coef(models$elastic_net, s = "lambda.min"))
-      importance_values <- abs(coef_matrix[-1, , drop = TRUE])
+      importance_values <- abs(coef_matrix[-1, , drop = TRUE])  # Remove intercept
       names(importance_values) <- feature_names
+
       results$elastic_net <- list(
         auc = auc(en_roc),
         importance = importance_values
@@ -169,6 +200,7 @@ evaluate_models <- function(models, test_x, test_y, feature_names) {
       message("Error in Elastic Net evaluation: ", e$message)
     })
   }
+
 
   # 2. Random Forest evaluation (unchanged)
   if (!is.null(models$random_forest)) {
@@ -404,7 +436,7 @@ run_ml_pipeline <- function(seurat_obj, cluster_id, top_n = 100) {
 }
 
 # Example usage
-cluster_id <- "2"
+cluster_id <- "1"
 results <- run_ml_pipeline(SO.har, cluster_id)
 
 # View results
@@ -477,7 +509,7 @@ extract_and_save_results <- function(results, output_prefix = "cluster_analysis"
 }
 
 # Extract and save results
-extracted_results <- extract_and_save_results(results, output_prefix = "cluster2")
+extracted_results <- extract_and_save_results(results, output_prefix = "cluster1")
 
 # View model performance
 print("Model Performance:")
