@@ -183,9 +183,9 @@ plot_signature_heatmap <- function(seurat_obj, signature_genes, cluster_id) {
     show_column_names = FALSE,
     row_names_gp = gpar(fontsize = 8),
     column_title = paste("Signature Genes -", cluster_id),
-    clustering_distance_rows = "euclidean",
+    clustering_distance_rows = "pearson",
     clustering_method_rows = "ward.D2",
-    clustering_distance_columns = "euclidean",
+    clustering_distance_columns = "pearson",
     clustering_method_columns = "ward.D2",
     col = colorRamp2(
       c(-2, 0, 2),
