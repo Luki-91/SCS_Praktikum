@@ -49,12 +49,12 @@ calculate_gmm_scores <- function(seurat_obj, cluster_id) {
       if (sum(vehicle_expr > 0) > 10 && sum(treated_expr > 0) > 10) {
         # Fit GMMs with error handling
         vehicle_gmm <- tryCatch(
-          Mclust(vehicle_expr, G = 1:5, verbose = FALSE),
+          Mclust(vehicle_expr, G = 1:3, verbose = FALSE),
           error = function(e) NULL
         )
 
         treated_gmm <- tryCatch(
-          Mclust(treated_expr, G = 1:5, verbose = FALSE),
+          Mclust(treated_expr, G = 1:3, verbose = FALSE),
           error = function(e) NULL
         )
 
@@ -243,7 +243,7 @@ analyze_cluster_signatures <- function(seurat_obj, cluster_id, n_top = 100) {
 }
 
 # Example usage
-cluster_id <- "1"  # Replace with your cluster of interest
+cluster_id <- "3"  # Replace with your cluster of interest
 Idents(SO.har) <- SO.har@meta.data$RNA_snn_res.0.4
 results <- analyze_cluster_signatures(SO.har, cluster_id)
 
@@ -257,5 +257,5 @@ print(results$heatmap)
 print(table(results$patterns$pattern))
 
 # Export results to file
-write.csv2(results$signatures, file = paste0("CD8_cluster_", cluster_id, "_signatures.csv"))
-write.csv2(results$patterns, file = paste0("CD8_cluster_", cluster_id, "_patterns.csv"))
+write.csv2(results$signatures, file = paste0("CD4_cluster_", cluster_id, "_signatures.csv"))
+write.csv2(results$patterns, file = paste0("CD4_cluster_", cluster_id, "_patterns.csv"))
