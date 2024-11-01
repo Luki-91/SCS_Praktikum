@@ -113,10 +113,18 @@ extract_signatures <- function(seurat_obj, cluster_id, n_top = 100) {
   expr_matrix <- GetAssayData(seurat_obj, slot = "data")[top_genes$gene, cells_cluster]
   metadata <- seurat_obj@meta.data[cells_cluster, ]
 
+  # Calculate mean expression for vehicle and treated conditions
+  vehicle_means <- rowMeans(expr_matrix[, metadata$Condition == "vehicle", drop = FALSE])
+  treated_means <- rowMeans(expr_matrix[, metadata$Condition == "treated", drop = FALSE])
+
+  # Calculate log2 fold change with pseudocount to avoid division by zero
+  log2fc <- log2((vehicle_means + 1) / (treated_means + 1))
+
   # Calculate additional metrics with error handling
   detailed_stats <- data.frame(
     gene = top_genes$gene,
     composite_score = top_genes$composite_score,
+    log2fc = log2fc,
     pct_expressing_vehicle = apply(expr_matrix[, metadata$Condition == "vehicle"], 1,
                                    function(x) mean(x > 0) * 100),
     pct_expressing_treated = apply(expr_matrix[, metadata$Condition == "treated"], 1,
@@ -243,7 +251,7 @@ analyze_cluster_signatures <- function(seurat_obj, cluster_id, n_top = 100) {
 }
 
 # Example usage
-cluster_id <- "3"  # Replace with your cluster of interest
+cluster_id <- "5"  # Replace with your cluster of interest
 Idents(SO.har) <- SO.har@meta.data$RNA_snn_res.0.4
 results <- analyze_cluster_signatures(SO.har, cluster_id)
 
